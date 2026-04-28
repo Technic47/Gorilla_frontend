@@ -3,7 +3,10 @@
     "allow": [
       "Bash(npm install *)",
       "Bash(npm run *)",
-      "Bash(grep -E \"\\\\.java$\")"
+      "Bash(grep -E \"\\\\.java$\")",
+      "Bash(git checkout *)",
+      "Bash(./mvnw compile *)",
+      "Bash(mvn compile *)"
     ]
   }
 }
