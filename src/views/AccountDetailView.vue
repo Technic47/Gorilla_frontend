@@ -38,7 +38,16 @@
       <template v-else>
         <!-- ── Personal info card ─────────────────────────────────────────── -->
         <div class="card">
-          <h2 class="card-title">{{ $t('detail.personalInfo') }}</h2>
+          <div class="card-header">
+            <h2 class="card-title">{{ $t('detail.personalInfo') }}</h2>
+            <img
+              v-if="account.avatar?.objectKey"
+              :src="`/storage/avatars/${account.avatar.objectKey}`"
+              class="account-avatar"
+              alt="avatar"
+              @click="lightboxUrl = `/storage/avatars/${account.avatar.objectKey}`"
+            />
+          </div>
           <div class="info-grid">
             <div class="info-item" v-for="field in infoFields" :key="field.key">
               <span class="info-label">{{ field.label }}</span>
@@ -160,10 +169,17 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- ── Avatar lightbox ───────────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="lightboxUrl" class="lightbox" @click="lightboxUrl = ''" @keydown.esc="lightboxUrl = ''">
+      <img :src="lightboxUrl" class="lightbox-img" alt="avatar" @click.stop/>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
@@ -175,6 +191,7 @@ const router = useRouter()
 const { t }  = useI18n()
 const auth   = useAuthStore()
 
+const lightboxUrl  = ref('')
 const account      = ref(null)
 const loading      = ref(false)
 const error        = ref('')
@@ -220,7 +237,13 @@ async function fetchAccount() {
   }
 }
 
-onMounted(fetchAccount)
+function onKeyDown(e) { if (e.key === 'Escape') lightboxUrl.value = '' }
+
+onMounted(() => {
+  fetchAccount()
+  document.addEventListener('keydown', onKeyDown)
+})
+onBeforeUnmount(() => document.removeEventListener('keydown', onKeyDown))
 
 // ── Edit account ─────────────────────────────────────────────────────────────
 function openUpdateModal() {
@@ -469,6 +492,51 @@ function levelClass(level) {
   border-bottom: 2px solid var(--primary);
   text-transform: uppercase;
   letter-spacing: .4px;
+}
+
+/* Card header with avatar */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.card-header .card-title {
+  margin-bottom: 0;
+}
+
+.account-avatar {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--border);
+  flex-shrink: 0;
+  cursor: zoom-in;
+  transition: opacity .15s;
+}
+
+.account-avatar:hover { opacity: .85; }
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  cursor: zoom-out;
+}
+
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: var(--radius);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, .6);
+  cursor: default;
 }
 
 /* Info grid */

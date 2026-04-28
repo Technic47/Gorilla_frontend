@@ -120,67 +120,140 @@
         <div v-if="!selectedId && !detailLoading" class="panel-empty">
           {{ $t('accounts.selectHint') }}
         </div>
-
         <div v-else-if="detailLoading" class="panel-state">{{ $t('accounts.loading') }}</div>
         <div v-else-if="detailError" class="panel-state error-msg">{{ detailError }}</div>
 
-        <template v-else-if="selectedAccount">
-          <div class="panel-section-title">{{ $t('detail.personalInfo') }}</div>
-          <table class="detail-table">
-            <tbody>
-            <tr v-for="field in infoFields" :key="field.key">
-              <td class="detail-label">{{ field.label }}</td>
-              <td
-                  class="detail-value"
-                  :class="{ 'badge-blocked': field.key === 'isBlocked' && selectedAccount.isBlocked }"
-              >
-                {{ formatField(selectedAccount[field.key], field.key) }}
-              </td>
-            </tr>
-            </tbody>
-          </table>
+        <div v-else-if="selectedAccount" class="panel-body">
 
-          <div class="panel-section-title">{{ $t('detail.warnings') }}</div>
-          <p v-if="!selectedAccount.warnings?.length" class="no-warn">{{ $t('detail.noWarnings') }}</p>
-          <div v-else class="warn-table-wrap">
-            <table class="warn-table">
-              <thead>
-              <tr>
-                <th>{{ $t('detail.warnCol.level') }}</th>
-                <th>{{ $t('detail.warnCol.message') }}</th>
-                <th>{{ $t('detail.warnCol.type') }}</th>
-                <th>{{ $t('detail.warnCol.created') }}</th>
-              </tr>
-              </thead>
+          <!-- Left: personal data + warnings -->
+          <div class="panel-left">
+            <div class="panel-section-title">{{ $t('detail.personalInfo') }}</div>
+            <table class="detail-table">
               <tbody>
-              <tr v-for="(w, i) in selectedAccount.warnings" :key="i">
-                <td><span :class="['level-badge', levelClass(w.level)]">{{ w.level }}</span></td>
-                <td>{{ w.message ?? '—' }}</td>
-                <td>{{ w.type ?? '—' }}</td>
-                <td>{{ w.created ? formatDate(w.created) : '—' }}</td>
+              <tr v-for="field in infoFields" :key="field.key">
+                <td class="detail-label">{{ field.label }}</td>
+                <td
+                    class="detail-value"
+                    :class="{ 'badge-blocked': field.key === 'isBlocked' && selectedAccount.isBlocked }"
+                >
+                  {{ formatField(selectedAccount[field.key], field.key) }}
+                </td>
               </tr>
               </tbody>
             </table>
+
+            <div class="panel-section-title">{{ $t('detail.warnings') }}</div>
+            <p v-if="!selectedAccount.warnings?.length" class="no-warn">{{ $t('detail.noWarnings') }}</p>
+            <div v-else class="warn-table-wrap">
+              <table class="warn-table">
+                <thead>
+                <tr>
+                  <th>{{ $t('detail.warnCol.level') }}</th>
+                  <th>{{ $t('detail.warnCol.message') }}</th>
+                  <th>{{ $t('detail.warnCol.type') }}</th>
+                  <th>{{ $t('detail.warnCol.created') }}</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="(w, i) in selectedAccount.warnings" :key="i">
+                  <td><span :class="['level-badge', levelClass(w.level)]">{{ w.level }}</span></td>
+                  <td>{{ w.message ?? '—' }}</td>
+                  <td>{{ w.type ?? '—' }}</td>
+                  <td>{{ w.created ? formatDate(w.created) : '—' }}</td>
+                </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          <!-- Action buttons -->
-          <div class="panel-actions">
-            <button class="btn-secondary" @click="openUpdateModal">{{ $t('detail.update.button') }}</button>
-            <button
-                :class="selectedAccount.isBlocked ? 'btn-unblock' : 'btn-danger'"
-                :disabled="blockLoading"
-                @click="toggleBlock"
-            >
-              {{ blockLoading ? '…' : (selectedAccount.isBlocked ? $t('detail.unblock') : $t('detail.block')) }}
-            </button>
-            <button class="btn-primary pay-btn" @click="openPayModal">{{ $t('detail.updatePayment') }}</button>
+          <!-- Right: avatar + buttons -->
+          <div class="panel-right">
+            <div class="panel-avatar-wrap">
+              <img
+                  v-if="selectedAccount.avatar?.objectKey"
+                  :src="avatarUrl(selectedAccount.avatar.objectKey)"
+                  class="panel-avatar"
+                  alt="avatar"
+                  @click="lightboxUrl = avatarUrl(selectedAccount.avatar.objectKey)"
+              />
+              <div v-else class="panel-avatar-placeholder">?</div>
+            </div>
+
+            <div class="panel-actions">
+              <button class="btn-secondary" @click="openUpdateModal">{{ $t('detail.update.button') }}</button>
+              <button
+                  :class="selectedAccount.isBlocked ? 'btn-unblock' : 'btn-danger'"
+                  :disabled="blockLoading"
+                  @click="toggleBlock"
+              >
+                {{ blockLoading ? '…' : (selectedAccount.isBlocked ? $t('detail.unblock') : $t('detail.block')) }}
+              </button>
+              <button class="btn-primary" @click="openPayModal">{{ $t('detail.updatePayment') }}</button>
+              <button class="btn-secondary" @click="openAvatarModal">{{ $t('accounts.avatar.button') }}</button>
+            </div>
+            <p v-if="blockError" class="error-msg panel-block-error">{{ blockError }}</p>
+            <p v-if="avatarUploadError" class="error-msg panel-block-error">{{ avatarUploadError }}</p>
           </div>
-          <p v-if="blockError" class="error-msg panel-block-error">{{ blockError }}</p>
-        </template>
+
+        </div>
       </div>
 
     </div>
   </div>
+
+  <!-- ── Avatar upload modal ───────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="avatarModalOpen" class="modal-overlay" @click.self="closeAvatarModal">
+      <div class="modal modal-camera" :class="{ 'modal-camera--active': cameraMode }">
+        <h3 class="modal-title">{{ $t('accounts.avatar.title') }}</h3>
+
+        <!-- ── Camera mode ── -->
+        <template v-if="cameraMode">
+          <div class="camera-wrap">
+            <video ref="videoRef" autoplay playsinline muted class="camera-video"/>
+          </div>
+          <p v-if="cameraError" class="error-msg">{{ cameraError }}</p>
+          <div class="modal-actions">
+            <button class="btn-secondary" @click="exitCameraMode">{{ $t('accounts.avatar.cameraBack') }}</button>
+            <button class="btn-primary" :disabled="!!cameraError" @click="capturePhoto">{{ $t('accounts.avatar.takePhoto') }}</button>
+          </div>
+        </template>
+
+        <!-- ── File select mode ── -->
+        <template v-else>
+          <div class="avatar-drop" @click="avatarInputRef.click()">
+            <img v-if="avatarPreviewUrl" :src="avatarPreviewUrl" class="avatar-preview" alt="preview"/>
+            <template v-else>
+              <div class="avatar-drop-icon">🖼</div>
+              <p class="avatar-hint">{{ $t('accounts.avatar.hint') }}</p>
+            </template>
+            <p v-if="avatarFile" class="avatar-file-info">
+              {{ avatarFile.name }} · {{ (avatarFile.size / 1024 / 1024).toFixed(2) }} MB
+            </p>
+          </div>
+
+          <input
+              ref="avatarInputRef"
+              type="file"
+              accept="image/*"
+              style="display:none"
+              @change="onAvatarFileSelected"
+          />
+
+          <p v-if="avatarError" class="error-msg">{{ avatarError }}</p>
+
+          <div class="modal-actions">
+            <button class="btn-secondary" @click="enterCameraMode">{{ $t('accounts.avatar.useCamera') }}</button>
+            <button class="btn-secondary" :disabled="avatarLoading" @click="closeAvatarModal">{{ $t('detail.modal.cancel') }}</button>
+            <button class="btn-primary" :disabled="avatarLoading || !avatarFile || !!avatarError" @click="submitAvatarUpload">
+              {{ avatarLoading ? '…' : $t('accounts.avatar.button') }}
+            </button>
+          </div>
+        </template>
+
+      </div>
+    </div>
+  </Teleport>
 
   <!-- ── Add account modal ──────────────────────────────────────────────────── -->
   <Teleport to="body">
@@ -202,7 +275,10 @@
         </div>
         <div class="field">
           <label>{{ $t('accounts.col.cardNumber') }}</label>
-          <input v-model="addForm.cardNumber" type="text" required/>
+          <div class="input-with-btn">
+            <input v-model="addForm.cardNumber" type="text" required/>
+            <button type="button" class="btn-secondary btn-scan" @click="openScanner">{{ $t('accounts.scan.button') }}</button>
+          </div>
         </div>
         <div class="field">
           <label>{{ $t('accounts.col.paidUntil') }}</label>
@@ -301,15 +377,40 @@
       </div>
     </div>
   </Teleport>
+
+  <!-- ── Avatar lightbox ───────────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="lightboxUrl" class="lightbox" @click="lightboxUrl = ''">
+      <img :src="lightboxUrl" class="lightbox-img" alt="avatar" @click.stop/>
+    </div>
+  </Teleport>
+
+  <!-- ── Barcode scanner modal ──────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="scannerOpen" class="modal-overlay" @click.self="closeScanner">
+      <div class="modal modal-scanner">
+        <h3 class="modal-title">{{ $t('accounts.scan.title') }}</h3>
+        <div class="camera-wrap">
+          <video ref="scanVideoRef" autoplay playsinline muted class="camera-video"/>
+        </div>
+        <p class="scan-status">{{ scanStatus }}</p>
+        <p v-if="scanError" class="error-msg">{{ scanError }}</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" @click="closeScanner">{{ $t('accounts.scan.cancel') }}</button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>
-import {ref, computed, reactive, onMounted, onBeforeUnmount} from 'vue'
+import {ref, computed, reactive, onMounted, onBeforeUnmount, watch} from 'vue'
 import {useRouter} from 'vue-router'
 import {useI18n} from 'vue-i18n'
 import {useAuthStore} from '../stores/auth'
 import api from '../api'
 import LangSwitch from '../components/LangSwitch.vue'
+import {BarcodeDetector} from 'barcode-detector/pure'
 
 const router = useRouter()
 
@@ -522,6 +623,150 @@ function applyPreset(months) {
   payModalDate.value = toDateInputValue([base.getFullYear(), base.getMonth() + 1, base.getDate()])
 }
 
+// ── Avatar upload ─────────────────────────────────────────────────────────────
+const avatarModalOpen = ref(false)
+const avatarFile = ref(null)
+const avatarPreviewUrl = ref('')
+const avatarLoading = ref(false)
+const avatarError = ref('')
+const avatarUploadError = ref('')
+const avatarInputRef = ref(null)
+const lightboxUrl = ref('')
+
+// ── Camera ────────────────────────────────────────────────────────────────────
+const cameraMode = ref(false)
+const videoRef = ref(null)
+const mediaStream = ref(null)
+const pendingStream = ref(null)
+const cameraError = ref('')
+
+// Assign stream the moment the <video> element appears in the DOM
+watch(videoRef, el => {
+  if (el && pendingStream.value) {
+    el.srcObject = pendingStream.value
+    pendingStream.value = null
+  }
+})
+
+const MINIO_MAX_BYTES = 10 * 1024 * 1024
+
+function openAvatarModal() {
+  avatarFile.value = null
+  avatarPreviewUrl.value = ''
+  avatarError.value = ''
+  avatarUploadError.value = ''
+  avatarModalOpen.value = true
+}
+
+function closeAvatarModal() {
+  if (avatarLoading.value) return
+  stopCamera()
+  cameraMode.value = false
+  if (avatarPreviewUrl.value) URL.revokeObjectURL(avatarPreviewUrl.value)
+  avatarFile.value = null
+  avatarPreviewUrl.value = ''
+  avatarError.value = ''
+  avatarUploadError.value = ''
+  avatarModalOpen.value = false
+}
+
+async function enterCameraMode() {
+  cameraError.value = ''
+  cameraMode.value = true  // switch UI immediately so user sees camera view
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video: true, audio: false})
+    mediaStream.value = stream
+    // By the time getUserMedia resolves the <video> is already mounted;
+    // fall back to pendingStream watcher if somehow it isn't yet.
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream
+    } else {
+      pendingStream.value = stream
+    }
+  } catch (e) {
+    cameraError.value = (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError')
+        ? t('accounts.avatar.cameraDenied')
+        : t('accounts.avatar.cameraError')
+  }
+}
+
+function exitCameraMode() {
+  stopCamera()
+  cameraMode.value = false
+}
+
+function stopCamera() {
+  if (mediaStream.value) {
+    mediaStream.value.getTracks().forEach(track => track.stop())
+    mediaStream.value = null
+  }
+}
+
+function capturePhoto() {
+  const video = videoRef.value
+  if (!video || !video.videoWidth) return
+  const canvas = document.createElement('canvas')
+  canvas.width = video.videoWidth
+  canvas.height = video.videoHeight
+  canvas.getContext('2d').drawImage(video, 0, 0)
+  canvas.toBlob(blob => {
+    if (!blob) return
+    if (avatarPreviewUrl.value) URL.revokeObjectURL(avatarPreviewUrl.value)
+    avatarFile.value = new File([blob], 'camera-capture.jpg', {type: 'image/jpeg'})
+    avatarPreviewUrl.value = URL.createObjectURL(blob)
+    avatarError.value = ''
+    exitCameraMode()
+  }, 'image/jpeg', 0.92)
+}
+
+function onAvatarFileSelected(e) {
+  const file = e.target.files[0]
+  e.target.value = ''
+  if (!file) return
+  avatarError.value = ''
+  if (!file.type.startsWith('image/')) {
+    avatarError.value = t('accounts.avatar.typeError')
+    return
+  }
+  if (file.size > MINIO_MAX_BYTES) {
+    avatarError.value = t('accounts.avatar.sizeError')
+    return
+  }
+  if (avatarPreviewUrl.value) URL.revokeObjectURL(avatarPreviewUrl.value)
+  avatarFile.value = file
+  avatarPreviewUrl.value = URL.createObjectURL(file)
+}
+
+async function submitAvatarUpload() {
+  const file = avatarFile.value
+  const accountId = selectedAccount.value.id
+  closeAvatarModal()
+  avatarUploadError.value = ''
+  avatarLoading.value = true
+  try {
+    const {data} = await api.post('/avatar/register-upload', {
+      accountId,
+      fileName: file.name,
+      contentType: file.type,
+    })
+    const uploadRes = await fetch(data.url, {
+      method: 'PUT',
+      body: file,
+      headers: {'Content-Type': file.type},
+    })
+    if (!uploadRes.ok) throw new Error(`${t('accounts.avatar.errorDefault')} (HTTP ${uploadRes.status})`)
+    await refreshSelected()
+  } catch (e) {
+    avatarUploadError.value = e.message || t('accounts.avatar.errorDefault')
+  } finally {
+    avatarLoading.value = false
+  }
+}
+
+function avatarUrl(objectKey) {
+  return `/storage/avatars/${objectKey}`
+}
+
 async function refreshSelected() {
   try {
     const {data} = await api.get(`/account/${selectedId.value}`)
@@ -675,6 +920,88 @@ function levelClass(level) {
   return ''
 }
 
+// ── Barcode scanner ───────────────────────────────────────────────────────────
+const scannerOpen = ref(false)
+const scanVideoRef = ref(null)
+const scanStream = ref(null)
+const scanError = ref('')
+const scanStatus = ref('')
+const scanAnimId = ref(null)
+const pendingScanStream = ref(null)
+
+watch(scanVideoRef, el => {
+  if (el && pendingScanStream.value) {
+    el.srcObject = pendingScanStream.value
+    pendingScanStream.value = null
+    startScanLoop()
+  }
+})
+
+async function openScanner() {
+  scanError.value = ''
+  scanStatus.value = t('accounts.scan.scanning')
+  scannerOpen.value = true
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}, audio: false})
+    scanStream.value = stream
+    if (scanVideoRef.value) {
+      scanVideoRef.value.srcObject = stream
+      startScanLoop()
+    } else {
+      pendingScanStream.value = stream
+    }
+  } catch (e) {
+    scanError.value = (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError')
+        ? t('accounts.scan.cameraDenied')
+        : t('accounts.scan.cameraError')
+  }
+}
+
+function startScanLoop() {
+  const detector = new BarcodeDetector({
+    formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code', 'data_matrix']
+  })
+  const video = scanVideoRef.value
+
+  async function scan() {
+    if (!scannerOpen.value) return
+    if (video.readyState >= 2) {
+      try {
+        const barcodes = await detector.detect(video)
+        if (barcodes.length > 0) {
+          addForm.cardNumber = barcodes[0].rawValue
+          closeScanner()
+          return
+        }
+      } catch {
+        // continue scanning on detection error
+      }
+    }
+    scanAnimId.value = requestAnimationFrame(scan)
+  }
+
+  scanAnimId.value = requestAnimationFrame(scan)
+}
+
+function stopScanStream() {
+  if (scanAnimId.value) {
+    cancelAnimationFrame(scanAnimId.value)
+    scanAnimId.value = null
+  }
+  if (scanStream.value) {
+    scanStream.value.getTracks().forEach(track => track.stop())
+    scanStream.value = null
+  }
+}
+
+function closeScanner() {
+  stopScanStream()
+  pendingScanStream.value = null
+  scannerOpen.value = false
+  scanError.value = ''
+  scanStatus.value = ''
+}
+
 // ── Close column menu on outside click ───────────────────────────────────────
 function handleOutsideClick(e) {
   if (colToggleRef.value && !colToggleRef.value.contains(e.target)) {
@@ -682,11 +1009,24 @@ function handleOutsideClick(e) {
   }
 }
 
+function onKeyDown(e) {
+  if (e.key === 'Escape') {
+    lightboxUrl.value = ''
+    if (scannerOpen.value) closeScanner()
+  }
+}
+
 onMounted(() => {
   fetchPage()
   document.addEventListener('click', handleOutsideClick)
+  document.addEventListener('keydown', onKeyDown)
 })
-onBeforeUnmount(() => document.removeEventListener('click', handleOutsideClick))
+onBeforeUnmount(() => {
+  document.removeEventListener('click', handleOutsideClick)
+  document.removeEventListener('keydown', onKeyDown)
+  stopScanStream()
+  stopCamera()
+})
 </script>
 
 <style scoped>
@@ -975,8 +1315,8 @@ tr.selected-row td {
 
 /* Detail panel */
 .detail-panel {
-  width: 380px;
-  min-width: 280px;
+  width: 760px;
+  min-width: 500px;
   flex-shrink: 0;
   background: var(--surface);
   border-radius: var(--radius);
@@ -987,6 +1327,30 @@ tr.selected-row td {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+}
+
+.panel-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.panel-left {
+  flex: 1;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  min-width: 0;
+}
+
+.panel-right {
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 16px;
+  gap: 0;
+  overflow-y: auto;
 }
 
 .panel-header {
@@ -1130,17 +1494,13 @@ tr.selected-row td {
 /* Panel action buttons */
 .panel-actions {
   display: flex;
-  gap: 10px;
-  padding: 14px 16px;
-  border-top: 1px solid var(--border);
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
 }
 
-.panel-actions .btn-secondary,
-.panel-actions .btn-danger,
-.panel-actions .btn-unblock {
-  flex: 1;
-  min-width: 100px;
+.panel-actions button {
+  width: 100%;
 }
 
 .btn-unblock {
@@ -1162,8 +1522,117 @@ tr.selected-row td {
   padding: 0 16px 12px;
 }
 
-.pay-btn {
-  flex: 1 1 100%;
+
+/* Panel avatar */
+.panel-avatar-wrap {
+  margin-bottom: 20px;
+}
+
+.panel-avatar {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--border);
+  display: block;
+  cursor: zoom-in;
+  transition: opacity .15s;
+}
+
+.panel-avatar:hover { opacity: .85; }
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, .85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  cursor: zoom-out;
+}
+
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: var(--radius);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, .6);
+  cursor: default;
+}
+
+.panel-avatar-placeholder {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  border: 3px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  color: var(--border);
+  background: var(--bg);
+}
+
+/* Avatar upload modal — wider when camera is active */
+.modal-camera--active {
+  max-width: 560px;
+}
+
+.camera-wrap {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Avatar upload modal */
+.avatar-drop {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s;
+  margin-bottom: 14px;
+}
+
+.avatar-drop:hover {
+  border-color: var(--primary-light);
+}
+
+.avatar-drop-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.avatar-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.avatar-preview {
+  width: 100%;
+  max-height: 180px;
+  object-fit: contain;
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+}
+
+.avatar-file-info {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  word-break: break-all;
 }
 
 .presets {
@@ -1188,6 +1657,35 @@ tr.selected-row td {
 }
 
 .btn-preset:hover { background: var(--primary); color: #fff; opacity: 1; }
+
+.input-with-btn {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-with-btn input {
+  flex: 1;
+  min-width: 0;
+}
+
+.btn-scan {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 12px;
+  padding: 7px 10px;
+}
+
+.modal-scanner {
+  max-width: 560px;
+}
+
+.scan-status {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  margin: 0 0 4px;
+}
 
 .field-checkbox label {
   display: flex;
