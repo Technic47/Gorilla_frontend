@@ -5,6 +5,7 @@
       <span class="topbar-brand">{{ $t('brand') }}</span>
       <div class="topbar-right">
         <LangSwitch />
+        <button class="btn-secondary admin-btn" @click="router.push('/admin')">{{ $t('admin.button') }}</button>
         <button class="btn-secondary logout-btn" @click="auth.logout()">{{ $t('accounts.signOut') }}</button>
       </div>
     </header>
@@ -13,21 +14,29 @@
     <div class="content">
       <div class="page-header">
         <button class="btn-secondary back-btn" @click="router.back()">{{ $t('detail.back') }}</button>
-        <h1 class="page-title">{{ $t('detail.title') }}</h1>
-        <button v-if="account" class="btn-secondary" @click="openUpdateModal">
-          {{ $t('detail.update.button') }}
-        </button>
-        <button v-if="account" class="btn-primary pay-btn" @click="openModal">
-          {{ $t('detail.updatePayment') }}
-        </button>
-        <button
-          v-if="account"
-          :class="account.isBlocked ? 'btn-unblock' : 'btn-danger'"
-          :disabled="blockLoading"
-          @click="toggleBlock"
-        >
-          {{ blockLoading ? '…' : (account.isBlocked ? $t('detail.unblock') : $t('detail.block')) }}
-        </button>
+        <h1 class="page-title">
+          {{ $t('detail.title') }}
+          <span v-if="account?.demo" class="badge-demo">{{ $t('detail.demo') }}</span>
+        </h1>
+        <div v-if="account" class="btn-groups">
+          <div class="btn-group">
+            <button class="btn-secondary" @click="openUpdateModal">
+              {{ $t('detail.update.button') }}
+            </button>
+            <button class="btn-primary" @click="openModal">
+              {{ $t('detail.updatePayment') }}
+            </button>
+          </div>
+          <div class="btn-group">
+            <button
+              :class="account.isBlocked ? 'btn-unblock' : 'btn-danger'"
+              :disabled="blockLoading"
+              @click="toggleBlock"
+            >
+              {{ blockLoading ? '…' : (account.isBlocked ? $t('detail.unblock') : $t('detail.block')) }}
+            </button>
+          </div>
+        </div>
       </div>
       <p v-if="blockError" class="error-msg block-error">{{ blockError }}</p>
 
@@ -37,16 +46,26 @@
 
       <template v-else>
         <!-- ── Personal info card ─────────────────────────────────────────── -->
-        <div class="card">
+        <div class="card" :class="{ 'card-demo': account.demo }">
           <div class="card-header">
-            <h2 class="card-title">{{ $t('detail.personalInfo') }}</h2>
-            <img
-              v-if="account.avatar?.objectKey"
-              :src="`/storage/avatars/${account.avatar.objectKey}`"
-              class="account-avatar"
-              alt="avatar"
-              @click="lightboxUrl = `/storage/avatars/${account.avatar.objectKey}`"
-            />
+            <div class="card-title-row">
+              <h2 class="card-title">{{ $t('detail.personalInfo') }}</h2>
+              <span v-if="account.demo" class="badge-demo badge-demo-lg">{{ $t('detail.demo') }}</span>
+            </div>
+            <div class="avatar-wrap">
+              <img
+                v-if="account.avatar?.objectKey"
+                :src="`/storage/avatars/${account.avatar.objectKey}`"
+                class="account-avatar"
+                alt="avatar"
+                @click="lightboxUrl = `/storage/avatars/${account.avatar.objectKey}`"
+              />
+              <div v-else class="account-avatar-placeholder">?</div>
+              <button class="btn-secondary avatar-upload-btn" @click="openAvatarModal">
+                {{ $t('accounts.avatar.button') }}
+              </button>
+              <p v-if="avatarUploadError" class="avatar-upload-error">{{ avatarUploadError }}</p>
+            </div>
           </div>
           <div class="info-grid">
             <div class="info-item" v-for="field in infoFields" :key="field.key">
@@ -58,34 +77,67 @@
           </div>
         </div>
 
-        <!-- ── Warnings card ──────────────────────────────────────────────── -->
-        <div class="card">
-          <h2 class="card-title">{{ $t('detail.warnings') }}</h2>
+        <!-- ── Lower grid: warnings + payment history ───────────────────── -->
+        <div class="lower-grid">
 
-          <p v-if="!account.warnings || account.warnings.length === 0" class="no-warn">
-            {{ $t('detail.noWarnings') }}
-          </p>
+          <!-- Warnings -->
+          <div class="card">
+            <h2 class="card-title">{{ $t('detail.warnings') }}</h2>
 
-          <div v-else class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>{{ $t('detail.warnCol.level') }}</th>
-                  <th>{{ $t('detail.warnCol.message') }}</th>
-                  <th>{{ $t('detail.warnCol.type') }}</th>
-                  <th>{{ $t('detail.warnCol.created') }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(w, i) in account.warnings" :key="i">
-                  <td><span :class="['level-badge', levelClass(w.level)]">{{ w.level }}</span></td>
-                  <td>{{ w.message ?? '—' }}</td>
-                  <td>{{ w.type ?? '—' }}</td>
-                  <td>{{ w.created ? formatDate(w.created) : '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <p v-if="!account.warnings || account.warnings.length === 0" class="no-warn">
+              {{ $t('detail.noWarnings') }}
+            </p>
+
+            <div v-else class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{{ $t('detail.warnCol.level') }}</th>
+                    <th>{{ $t('detail.warnCol.message') }}</th>
+                    <th>{{ $t('detail.warnCol.type') }}</th>
+                    <th>{{ $t('detail.warnCol.created') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(w, i) in account.warnings" :key="i">
+                    <td><span :class="['level-badge', levelClass(w.level)]">{{ w.level }}</span></td>
+                    <td>{{ w.message ?? '—' }}</td>
+                    <td>{{ w.type ?? '—' }}</td>
+                    <td>{{ w.created ? formatDate(w.created) : '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          <!-- Payment history -->
+          <div class="card">
+            <h2 class="card-title">{{ $t('detail.payments.title') }}</h2>
+
+            <div v-if="paymentsLoading" class="no-warn">{{ $t('accounts.loading') }}</div>
+            <p v-else-if="paymentsError" class="no-warn error-msg">{{ paymentsError }}</p>
+            <p v-else-if="payments.length === 0" class="no-warn">{{ $t('detail.payments.empty') }}</p>
+
+            <div v-else class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>{{ $t('detail.payments.col.date') }}</th>
+                    <th>{{ $t('detail.payments.col.period') }}</th>
+                    <th>{{ $t('detail.payments.col.description') }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="p in payments" :key="p.id">
+                    <td class="pay-date">{{ p.created ? formatDate(p.created) : '—' }}</td>
+                    <td>{{ formatPeriod(p.period) }}</td>
+                    <td>{{ p.description ?? '—' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
         </div>
       </template>
     </div>
@@ -170,6 +222,58 @@
     </div>
   </Teleport>
 
+  <!-- ── Avatar upload modal ──────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="avatarModalOpen" class="modal-overlay" @click.self="closeAvatarModal">
+      <div class="modal modal-camera" :class="{ 'modal-camera--active': cameraMode }">
+        <h3 class="modal-title">{{ $t('accounts.avatar.title') }}</h3>
+
+        <template v-if="cameraMode">
+          <div class="camera-wrap">
+            <video ref="videoRef" autoplay playsinline muted class="camera-video"/>
+          </div>
+          <p v-if="cameraError" class="error-msg">{{ cameraError }}</p>
+          <div class="modal-actions">
+            <button class="btn-secondary" @click="exitCameraMode">{{ $t('accounts.avatar.cameraBack') }}</button>
+            <button class="btn-primary" :disabled="!!cameraError" @click="capturePhoto">{{ $t('accounts.avatar.takePhoto') }}</button>
+          </div>
+        </template>
+
+        <template v-else>
+          <div class="avatar-drop" @click="avatarInputRef.click()">
+            <img v-if="avatarPreviewUrl" :src="avatarPreviewUrl" class="avatar-preview" alt="preview"/>
+            <template v-else>
+              <div class="avatar-drop-icon">🖼</div>
+              <p class="avatar-hint">{{ $t('accounts.avatar.hint') }}</p>
+            </template>
+            <p v-if="avatarFile" class="avatar-file-info">
+              {{ avatarFile.name }} · {{ (avatarFile.size / 1024 / 1024).toFixed(2) }} MB
+            </p>
+          </div>
+
+          <input
+            ref="avatarInputRef"
+            type="file"
+            accept="image/*"
+            style="display:none"
+            @change="onAvatarFileSelected"
+          />
+
+          <p v-if="avatarError" class="error-msg">{{ avatarError }}</p>
+
+          <div class="modal-actions">
+            <button class="btn-secondary" @click="enterCameraMode">{{ $t('accounts.avatar.useCamera') }}</button>
+            <button class="btn-secondary" :disabled="avatarLoading" @click="closeAvatarModal">{{ $t('detail.modal.cancel') }}</button>
+            <button class="btn-primary" :disabled="avatarLoading || !avatarFile || !!avatarError" @click="submitAvatarUpload">
+              {{ avatarLoading ? '…' : $t('accounts.avatar.button') }}
+            </button>
+          </div>
+        </template>
+
+      </div>
+    </div>
+  </Teleport>
+
   <!-- ── Avatar lightbox ───────────────────────────────────────────────────── -->
   <Teleport to="body">
     <div v-if="lightboxUrl" class="lightbox" @click="lightboxUrl = ''" @keydown.esc="lightboxUrl = ''">
@@ -179,7 +283,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, reactive, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
@@ -195,6 +299,27 @@ const lightboxUrl  = ref('')
 const account      = ref(null)
 const loading      = ref(false)
 const error        = ref('')
+
+const payments        = ref([])
+const paymentsLoading = ref(false)
+const paymentsError   = ref('')
+
+async function fetchPayments() {
+  paymentsLoading.value = true
+  paymentsError.value   = ''
+  try {
+    const { data } = await api.get(`/payment/user/${route.params.id}`)
+    payments.value = data.slice().sort((a, b) => {
+      const ta = Array.isArray(a.created) ? new Date(a.created[0], a.created[1]-1, a.created[2], a.created[3]??0, a.created[4]??0) : new Date(a.created)
+      const tb = Array.isArray(b.created) ? new Date(b.created[0], b.created[1]-1, b.created[2], b.created[3]??0, b.created[4]??0) : new Date(b.created)
+      return tb - ta
+    })
+  } catch (e) {
+    paymentsError.value = e.response?.data?.detail || t('detail.payments.error')
+  } finally {
+    paymentsLoading.value = false
+  }
+}
 
 const modalOpen    = ref(false)
 const modalDate    = ref('')
@@ -241,6 +366,7 @@ function onKeyDown(e) { if (e.key === 'Escape') lightboxUrl.value = '' }
 
 onMounted(() => {
   fetchAccount()
+  fetchPayments()
   document.addEventListener('keydown', onKeyDown)
 })
 onBeforeUnmount(() => document.removeEventListener('keydown', onKeyDown))
@@ -326,6 +452,7 @@ async function submitPayment() {
     })
     modalOpen.value = false
     await fetchAccount()
+    fetchPayments()
   } catch (e) {
     const data = e.response?.data
     const msg  = data?.detail || data?.message || (typeof data === 'string' ? data : null)
@@ -353,6 +480,141 @@ function toDateInputValue(value) {
   return String(value).slice(0, 10)
 }
 
+// ── Avatar upload ─────────────────────────────────────────────────────────────
+const avatarModalOpen    = ref(false)
+const avatarFile         = ref(null)
+const avatarPreviewUrl   = ref('')
+const avatarLoading      = ref(false)
+const avatarError        = ref('')
+const avatarUploadError  = ref('')
+const avatarInputRef     = ref(null)
+
+const cameraMode    = ref(false)
+const videoRef      = ref(null)
+const mediaStream   = ref(null)
+const pendingStream = ref(null)
+const cameraError   = ref('')
+
+const MINIO_MAX_BYTES = 10 * 1024 * 1024
+
+watch(videoRef, el => {
+  if (el && pendingStream.value) {
+    el.srcObject = pendingStream.value
+    pendingStream.value = null
+  }
+})
+
+function openAvatarModal() {
+  avatarFile.value       = null
+  avatarPreviewUrl.value = ''
+  avatarError.value      = ''
+  avatarUploadError.value = ''
+  avatarModalOpen.value  = true
+}
+
+function closeAvatarModal() {
+  if (avatarLoading.value) return
+  stopCamera()
+  cameraMode.value = false
+  if (avatarPreviewUrl.value) URL.revokeObjectURL(avatarPreviewUrl.value)
+  avatarFile.value        = null
+  avatarPreviewUrl.value  = ''
+  avatarError.value       = ''
+  avatarUploadError.value = ''
+  avatarModalOpen.value   = false
+}
+
+async function enterCameraMode() {
+  cameraError.value = ''
+  cameraMode.value  = true
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+    mediaStream.value = stream
+    if (videoRef.value) {
+      videoRef.value.srcObject = stream
+    } else {
+      pendingStream.value = stream
+    }
+  } catch (e) {
+    cameraError.value = (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError')
+      ? t('accounts.avatar.cameraDenied')
+      : t('accounts.avatar.cameraError')
+  }
+}
+
+function exitCameraMode() {
+  stopCamera()
+  cameraMode.value = false
+}
+
+function stopCamera() {
+  if (mediaStream.value) {
+    mediaStream.value.getTracks().forEach(track => track.stop())
+    mediaStream.value = null
+  }
+}
+
+function capturePhoto() {
+  const video = videoRef.value
+  if (!video || !video.videoWidth) return
+  const canvas = document.createElement('canvas')
+  canvas.width  = video.videoWidth
+  canvas.height = video.videoHeight
+  canvas.getContext('2d').drawImage(video, 0, 0)
+  canvas.toBlob(blob => {
+    if (!blob) return
+    if (avatarPreviewUrl.value) URL.revokeObjectURL(avatarPreviewUrl.value)
+    avatarFile.value       = new File([blob], 'camera-capture.jpg', { type: 'image/jpeg' })
+    avatarPreviewUrl.value = URL.createObjectURL(blob)
+    avatarError.value      = ''
+    exitCameraMode()
+  }, 'image/jpeg', 0.92)
+}
+
+function onAvatarFileSelected(e) {
+  const file = e.target.files[0]
+  e.target.value = ''
+  if (!file) return
+  avatarError.value = ''
+  if (!file.type.startsWith('image/')) {
+    avatarError.value = t('accounts.avatar.typeError')
+    return
+  }
+  if (file.size > MINIO_MAX_BYTES) {
+    avatarError.value = t('accounts.avatar.sizeError')
+    return
+  }
+  if (avatarPreviewUrl.value) URL.revokeObjectURL(avatarPreviewUrl.value)
+  avatarFile.value       = file
+  avatarPreviewUrl.value = URL.createObjectURL(file)
+}
+
+async function submitAvatarUpload() {
+  const file      = avatarFile.value
+  const accountId = route.params.id
+  closeAvatarModal()
+  avatarUploadError.value = ''
+  avatarLoading.value     = true
+  try {
+    const { data } = await api.post('/avatar/register-upload', {
+      accountId,
+      fileName:    file.name,
+      contentType: file.type,
+    })
+    const uploadRes = await fetch(data.url, {
+      method:  'PUT',
+      body:    file,
+      headers: { 'Content-Type': file.type },
+    })
+    if (!uploadRes.ok) throw new Error(`${t('accounts.avatar.errorDefault')} (HTTP ${uploadRes.status})`)
+    await fetchAccount()
+  } catch (e) {
+    avatarUploadError.value = e.message || t('accounts.avatar.errorDefault')
+  } finally {
+    avatarLoading.value = false
+  }
+}
+
 // ── Formatting ────────────────────────────────────────────────────────────────
 function formatField(value, key) {
   if (value == null || value === '') return '—'
@@ -369,6 +631,21 @@ function formatDate(value, dateOnly = false) {
     : new Date(value)
   if (isNaN(d)) return String(value)
   return dateOnly ? d.toLocaleDateString() : d.toLocaleString()
+}
+
+function formatPeriod(p) {
+  if (!p) return '—'
+  const str = typeof p === 'string' ? p : JSON.stringify(p)
+  const m = str.match(/^P(?:(-?\d+)Y)?(?:(-?\d+)M)?(?:(-?\d+)D)?$/)
+  if (!m) return str
+  const years  = parseInt(m[1] || 0)
+  const months = parseInt(m[2] || 0)
+  const days   = parseInt(m[3] || 0)
+  const parts  = []
+  if (years)  parts.push(t('detail.payments.years',  { n: years }))
+  if (months) parts.push(t('detail.payments.months', { n: months }))
+  if (days)   parts.push(t('detail.payments.days',   { n: days }))
+  return parts.length ? parts.join(' ') : '—'
 }
 
 function levelClass(level) {
@@ -396,6 +673,7 @@ function levelClass(level) {
 }
 .topbar-brand { font-size: 18px; font-weight: 700; letter-spacing: .3px; }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
+.admin-btn,
 .logout-btn { color: #fff; border-color: rgba(255,255,255,.5); font-size: 13px; padding: 6px 14px; }
 
 /* Content */
@@ -409,7 +687,8 @@ function levelClass(level) {
 }
 .back-btn { flex-shrink: 0; }
 .page-title { font-size: 20px; font-weight: 700; color: var(--text); flex: 1; }
-.pay-btn { flex-shrink: 0; }
+.btn-groups { display: flex; flex-direction: column; gap: 34px; align-items: flex-end; flex-shrink: 0; }
+.btn-group { display: flex; gap: 8px; align-items: center; }
 .btn-unblock {
   flex-shrink: 0;
   background: #2e7d32;
@@ -502,8 +781,15 @@ function levelClass(level) {
   margin-bottom: 20px;
 }
 
-.card-header .card-title {
-  margin-bottom: 0;
+.card-header .card-title-row { flex: 1; }
+.card-header .card-title { margin-bottom: 0; }
+
+.avatar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .account-avatar {
@@ -512,12 +798,52 @@ function levelClass(level) {
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid var(--border);
-  flex-shrink: 0;
   cursor: zoom-in;
   transition: opacity .15s;
 }
 
 .account-avatar:hover { opacity: .85; }
+
+.account-avatar-placeholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  color: var(--text-muted);
+}
+
+.avatar-upload-btn { font-size: 12px; padding: 5px 12px; }
+.avatar-upload-error { font-size: 12px; color: var(--danger); text-align: center; margin: 0; }
+
+/* Avatar modal drop zone */
+.avatar-drop {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.avatar-drop:hover { border-color: var(--primary); }
+.avatar-drop-icon { font-size: 32px; }
+.avatar-hint { font-size: 13px; color: var(--text-muted); margin: 0; }
+.avatar-preview { max-width: 100%; max-height: 200px; border-radius: var(--radius); object-fit: contain; }
+.avatar-file-info { font-size: 11px; color: var(--text-muted); margin: 0; }
+
+/* Camera */
+.modal-camera--active { max-width: 520px; }
+.camera-wrap { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: var(--radius); overflow: hidden; }
+.camera-video { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 .lightbox {
   position: fixed;
@@ -538,6 +864,16 @@ function levelClass(level) {
   box-shadow: 0 8px 40px rgba(0, 0, 0, .6);
   cursor: default;
 }
+
+/* Lower two-column grid */
+.lower-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.pay-date { white-space: nowrap; }
 
 /* Info grid */
 .info-grid {
@@ -567,6 +903,35 @@ th {
 }
 td { padding: 10px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
+
+/* Demo badge */
+.badge-demo {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  background: #ff8f00;
+  color: #fff;
+  vertical-align: middle;
+  margin-left: 10px;
+}
+.badge-demo-lg {
+  font-size: 12px;
+  padding: 3px 10px;
+  margin-left: 0;
+}
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 0;
+}
+.card-demo {
+  border-left: 4px solid #ff8f00;
+}
 
 /* Level badges */
 .level-badge {

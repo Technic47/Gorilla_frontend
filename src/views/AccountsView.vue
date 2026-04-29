@@ -5,6 +5,7 @@
       <span class="topbar-brand">{{ $t('brand') }}</span>
       <div class="topbar-right">
         <LangSwitch/>
+        <button class="btn-secondary admin-btn" @click="router.push('/admin')">{{ $t('admin.button') }}</button>
         <button class="btn-secondary logout-btn" @click="auth.logout()">{{ $t('accounts.signOut') }}</button>
       </div>
     </header>
@@ -102,7 +103,7 @@
               {{ $t('accounts.prev') }}
             </button>
             <select v-model.number="pageSize" @change="goPage(0)">
-              <option v-for="s in [5, 10, 20, 50]" :key="s" :value="s">{{ s }} {{ $t('accounts.perPage') }}</option>
+              <option v-for="s in [5, 10, 15, 20, 25, 30, 40, 50]" :key="s" :value="s">{{ s }} {{ $t('accounts.perPage') }}</option>
             </select>
             <button class="btn-secondary" :disabled="currentPage >= totalPages - 1" @click="goPage(currentPage + 1)">
               {{ $t('accounts.next') }}
@@ -115,6 +116,12 @@
       <div class="detail-panel">
         <div class="panel-header">
           <span class="panel-title">{{ $t('detail.title') }}</span>
+          <button
+            v-if="selectedId"
+            class="panel-open-btn"
+            :title="$t('detail.openFull')"
+            @click="router.push(`/account/${selectedId}`)"
+          >ℹ</button>
         </div>
 
         <div v-if="!selectedId && !detailLoading" class="panel-empty">
@@ -180,16 +187,20 @@
             </div>
 
             <div class="panel-actions">
-              <button class="btn-secondary" @click="openUpdateModal">{{ $t('detail.update.button') }}</button>
-              <button
-                  :class="selectedAccount.isBlocked ? 'btn-unblock' : 'btn-danger'"
-                  :disabled="blockLoading"
-                  @click="toggleBlock"
-              >
-                {{ blockLoading ? '…' : (selectedAccount.isBlocked ? $t('detail.unblock') : $t('detail.block')) }}
-              </button>
-              <button class="btn-primary" @click="openPayModal">{{ $t('detail.updatePayment') }}</button>
-              <button class="btn-secondary" @click="openAvatarModal">{{ $t('accounts.avatar.button') }}</button>
+              <div class="panel-btn-group">
+                <button class="btn-secondary" @click="openUpdateModal">{{ $t('detail.update.button') }}</button>
+                <button class="btn-primary" @click="openPayModal">{{ $t('detail.updatePayment') }}</button>
+              </div>
+              <div class="panel-btn-group">
+                <button
+                    :class="selectedAccount.isBlocked ? 'btn-unblock' : 'btn-danger'"
+                    :disabled="blockLoading"
+                    @click="toggleBlock"
+                >
+                  {{ blockLoading ? '…' : (selectedAccount.isBlocked ? $t('detail.unblock') : $t('detail.block')) }}
+                </button>
+                <button class="btn-secondary" @click="openAvatarModal">{{ $t('accounts.avatar.button') }}</button>
+              </div>
             </div>
             <p v-if="blockError" class="error-msg panel-block-error">{{ blockError }}</p>
             <p v-if="avatarUploadError" class="error-msg panel-block-error">{{ avatarUploadError }}</p>
@@ -280,11 +291,6 @@
             <button type="button" class="btn-secondary btn-scan" @click="openScanner">{{ $t('accounts.scan.button') }}</button>
           </div>
         </div>
-        <div class="field">
-          <label>{{ $t('accounts.col.paidUntil') }}</label>
-          <input v-model="addForm.paidUntil" type="date"/>
-        </div>
-
         <p v-if="addError" class="error-msg">{{ addError }}</p>
 
         <div class="modal-actions">
@@ -421,11 +427,11 @@ const auth = useAuthStore()
 const addModalOpen = ref(false)
 const addLoading = ref(false)
 const addError = ref('')
-const addForm = reactive({firstName: '', secondName: '', lastName: '', cardNumber: '', paidUntil: ''})
+const addForm = reactive({firstName: '', secondName: '', lastName: '', cardNumber: ''})
 const addFormValid = computed(() => addForm.firstName.trim() && addForm.lastName.trim() && addForm.cardNumber.trim())
 
 function openAddModal() {
-  Object.assign(addForm, {firstName: '', secondName: '', lastName: '', cardNumber: '', paidUntil: ''})
+  Object.assign(addForm, {firstName: '', secondName: '', lastName: '', cardNumber: ''})
   addError.value = ''
   addModalOpen.value = true
 }
@@ -444,7 +450,6 @@ async function submitAdd() {
       secondName: addForm.secondName.trim() || null,
       lastName: addForm.lastName.trim(),
       cardNumber: addForm.cardNumber.trim(),
-      paidUntil: addForm.paidUntil ? `${addForm.paidUntil}T00:00:00` : null,
       isBlocked: false,
     }
     const {data} = await api.post('/account', payload)
@@ -492,7 +497,7 @@ const rows = ref([])
 const loading = ref(false)
 const error = ref('')
 const currentPage = ref(0)
-const pageSize = ref(10)
+const pageSize = ref(15)
 const totalPages = ref(0)
 const totalElements = ref(0)
 const sortField = ref('id')
@@ -1060,6 +1065,7 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
+.admin-btn,
 .logout-btn {
   color: #fff;
   border-color: rgba(255, 255, 255, .5);
@@ -1357,6 +1363,9 @@ tr.selected-row td {
   padding: 14px 16px 12px;
   border-bottom: 2px solid var(--primary);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .panel-title {
@@ -1365,7 +1374,21 @@ tr.selected-row td {
   text-transform: uppercase;
   letter-spacing: .4px;
   color: var(--primary);
+  flex: 1;
 }
+
+.panel-open-btn {
+  background: none;
+  border: none;
+  padding: 0 2px;
+  font-size: 15px;
+  color: var(--primary);
+  cursor: pointer;
+  line-height: 1;
+  opacity: .7;
+  transition: opacity .15s;
+}
+.panel-open-btn:hover { opacity: 1; }
 
 .panel-empty {
   padding: 48px 20px;
@@ -1495,11 +1518,17 @@ tr.selected-row td {
 .panel-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 34px;
   width: 100%;
 }
 
-.panel-actions button {
+.panel-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.panel-btn-group button {
   width: 100%;
 }
 

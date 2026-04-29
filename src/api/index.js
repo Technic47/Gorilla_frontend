@@ -11,7 +11,8 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401 && !err.config.url.includes('/auth/login')) {
+    const url = err.config.url
+    if (err.response?.status === 401 && !url.includes('/auth/login') && !url.includes('/users/me/credentials')) {
       localStorage.removeItem('token')
       window.location.href = '/login'
     }
