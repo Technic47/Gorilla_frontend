@@ -2,7 +2,7 @@
   <div class="layout">
     <!-- ── Header ──────────────────────────────────────────────────────────── -->
     <header class="topbar">
-      <span class="topbar-brand">{{ $t('brand') }}</span>
+      <span class="topbar-brand" @click="router.push('/')">{{ $t('brand') }}</span>
       <div class="topbar-right">
         <LangSwitch />
         <button class="btn-secondary admin-btn" @click="router.push('/admin')">{{ $t('admin.button') }}</button>
@@ -310,8 +310,8 @@ async function fetchPayments() {
   try {
     const { data } = await api.get(`/payment/user/${route.params.id}`)
     payments.value = data.slice().sort((a, b) => {
-      const ta = Array.isArray(a.created) ? new Date(a.created[0], a.created[1]-1, a.created[2], a.created[3]??0, a.created[4]??0) : new Date(a.created)
-      const tb = Array.isArray(b.created) ? new Date(b.created[0], b.created[1]-1, b.created[2], b.created[3]??0, b.created[4]??0) : new Date(b.created)
+      const ta = Array.isArray(a.created) ? new Date(Date.UTC(a.created[0], a.created[1]-1, a.created[2], a.created[3]??0, a.created[4]??0)) : new Date(a.created)
+      const tb = Array.isArray(b.created) ? new Date(Date.UTC(b.created[0], b.created[1]-1, b.created[2], b.created[3]??0, b.created[4]??0)) : new Date(b.created)
       return tb - ta
     })
   } catch (e) {
@@ -601,7 +601,8 @@ async function submitAvatarUpload() {
       fileName:    file.name,
       contentType: file.type,
     })
-    const uploadRes = await fetch(data.url, {
+    const uploadUrl = data.url.replace(/^https?:\/\/[^/]+/, '/minio-upload')
+    const uploadRes = await fetch(uploadUrl, {
       method:  'PUT',
       body:    file,
       headers: { 'Content-Type': file.type },
@@ -627,7 +628,7 @@ function formatField(value, key) {
 function formatDate(value, dateOnly = false) {
   if (!value) return '—'
   const d = Array.isArray(value)
-    ? new Date(value[0], value[1] - 1, value[2], value[3] ?? 0, value[4] ?? 0, value[5] ?? 0)
+    ? new Date(Date.UTC(value[0], value[1] - 1, value[2], value[3] ?? 0, value[4] ?? 0, value[5] ?? 0))
     : new Date(value)
   if (isNaN(d)) return String(value)
   return dateOnly ? d.toLocaleDateString() : d.toLocaleString()
@@ -671,7 +672,7 @@ function levelClass(level) {
   color: #fff;
   box-shadow: 0 2px 4px rgba(0,0,0,.2);
 }
-.topbar-brand { font-size: 18px; font-weight: 700; letter-spacing: .3px; }
+.topbar-brand { font-size: 18px; font-weight: 700; letter-spacing: .3px; cursor: pointer; }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
 .admin-btn,
 .logout-btn { color: #fff; border-color: rgba(255,255,255,.5); font-size: 13px; padding: 6px 14px; }

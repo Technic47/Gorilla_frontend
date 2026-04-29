@@ -15,6 +15,11 @@ export default defineConfig({
         target: 'http://localhost:9000',
         changeOrigin: true,
         rewrite: path => path.replace(/^\/storage/, '')
+      },
+      '/minio-upload': {
+        target: 'http://localhost:9000',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/minio-upload/, '')
       }
     }
   }

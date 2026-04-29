@@ -2,7 +2,7 @@
   <div class="layout">
     <!-- ── Header ─────────────────────────────────────────────────────────── -->
     <header class="topbar">
-      <span class="topbar-brand">{{ $t('brand') }}</span>
+      <span class="topbar-brand" @click="router.push('/')">{{ $t('brand') }}</span>
       <div class="topbar-right">
         <LangSwitch/>
         <button class="btn-secondary admin-btn" @click="router.push('/admin')">{{ $t('admin.button') }}</button>
@@ -754,7 +754,8 @@ async function submitAvatarUpload() {
       fileName: file.name,
       contentType: file.type,
     })
-    const uploadRes = await fetch(data.url, {
+    const uploadUrl = data.url.replace(/^https?:\/\/[^/]+/, '/minio-upload')
+    const uploadRes = await fetch(uploadUrl, {
       method: 'PUT',
       body: file,
       headers: {'Content-Type': file.type},
@@ -811,18 +812,10 @@ async function selectAccount(id) {
   }
 }
 
-// ── Filtered rows (client-side search + hide blocked) ────────────────────────
+// ── Filtered rows (hideBlocked is still client-side; search is server-side) ───
 const filteredRows = computed(() => {
-  let result = rows.value
-  if (hideBlocked.value) result = result.filter(row => !row.isBlocked)
-  const q = search.value.trim().toLowerCase()
-  if (!q) return result
-  return result.filter(row =>
-      allColumns.value.some(col => {
-        const v = row[col.key]
-        return v != null && String(v).toLowerCase().includes(q)
-      })
-  )
+  if (!hideBlocked.value) return rows.value
+  return rows.value.filter(row => !row.isBlocked)
 })
 
 // ── Data fetching ─────────────────────────────────────────────────────────────
@@ -830,11 +823,13 @@ async function fetchPage() {
   loading.value = true
   error.value = ''
   try {
+    const q = search.value.trim()
     const {data} = await api.get('/account/page', {
       params: {
         page: currentPage.value,
         size: pageSize.value,
-        sort: `${sortField.value},${sortDir.value}`
+        sort: `${sortField.value},${sortDir.value}`,
+        ...(q && { query: q }),
       }
     })
     rows.value = data.content ?? []
@@ -911,7 +906,7 @@ function formatField(value, key) {
 function formatDate(value, dateOnly = false) {
   if (!value) return '—'
   const d = Array.isArray(value)
-      ? new Date(value[0], value[1] - 1, value[2], value[3] ?? 0, value[4] ?? 0, value[5] ?? 0)
+      ? new Date(Date.UTC(value[0], value[1] - 1, value[2], value[3] ?? 0, value[4] ?? 0, value[5] ?? 0))
       : new Date(value)
   if (isNaN(d)) return String(value)
   return dateOnly ? d.toLocaleDateString() : d.toLocaleString()
@@ -1057,6 +1052,7 @@ onBeforeUnmount(() => {
   font-size: 18px;
   font-weight: 700;
   letter-spacing: .3px;
+  cursor: pointer;
 }
 
 .topbar-right {

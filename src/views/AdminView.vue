@@ -1,7 +1,7 @@
 <template>
   <div class="layout">
     <header class="topbar">
-      <span class="topbar-brand">{{ $t('brand') }}</span>
+      <span class="topbar-brand" @click="router.push('/')">{{ $t('brand') }}</span>
       <div class="topbar-right">
         <LangSwitch />
         <button class="btn-secondary logout-btn" @click="auth.logout()">{{ $t('accounts.signOut') }}</button>
@@ -452,7 +452,7 @@ async function deleteAllDemo() {
 function formatBackupDate(value) {
   if (!value) return '—'
   const d = Array.isArray(value)
-    ? new Date(value[0], value[1] - 1, value[2], value[3] ?? 0, value[4] ?? 0, value[5] ?? 0)
+    ? new Date(Date.UTC(value[0], value[1] - 1, value[2], value[3] ?? 0, value[4] ?? 0, value[5] ?? 0))
     : new Date(value)
   return isNaN(d) ? '—' : d.toLocaleString()
 }
@@ -478,7 +478,7 @@ function formatSize(bytes) {
   color: #fff;
   box-shadow: 0 2px 4px rgba(0,0,0,.2);
 }
-.topbar-brand { font-size: 18px; font-weight: 700; letter-spacing: .3px; }
+.topbar-brand { font-size: 18px; font-weight: 700; letter-spacing: .3px; cursor: pointer; }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
 .logout-btn { color: #fff; border-color: rgba(255,255,255,.5); font-size: 13px; padding: 6px 14px; }
 
