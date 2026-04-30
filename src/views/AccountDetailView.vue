@@ -396,6 +396,7 @@ async function submitUpdate() {
   updateError.value   = ''
   try {
     const payload = {
+      ...account.value,
       firstName:  updateForm.firstName.trim(),
       secondName: updateForm.secondName.trim() || null,
       lastName:   updateForm.lastName.trim(),
