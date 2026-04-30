@@ -18,6 +18,13 @@
       <div class="tabs">
         <button
           class="tab-btn"
+          :class="{ 'tab-active': activeTab === 'analytics' }"
+          @click="activeTab = 'analytics'"
+        >
+          {{ $t('admin.tabs.analytics') }}
+        </button>
+        <button
+          class="tab-btn"
           :class="{ 'tab-active': activeTab === 'dbBackup' }"
           @click="activeTab = 'dbBackup'"
         >
@@ -37,6 +44,165 @@
         >
           {{ $t('admin.tabs.demoData') }}
         </button>
+      </div>
+
+      <!-- ── Analytics tab ───────────────────────────────────────────────── -->
+      <div v-if="activeTab === 'analytics'" class="tab-content">
+        <div class="card analytics-header-card">
+          <div class="panel-title-row">
+            <h2 class="card-title">{{ $t('admin.analytics.summaryTitle') }}</h2>
+            <button class="btn-secondary refresh-btn" :disabled="summaryLoading" @click="fetchSummary">
+              {{ $t('admin.backups.refresh') }}
+            </button>
+          </div>
+
+          <div v-if="summaryLoading" class="panel-state">{{ $t('admin.backups.loading') }}</div>
+          <div v-else-if="summaryError" class="panel-state status-err">{{ summaryError }}</div>
+          <div v-else-if="summary" class="metrics-grid">
+            <div class="metric-tile metric-total">
+              <div class="metric-label">{{ $t('admin.analytics.accountsTotal') }}</div>
+              <div class="metric-value">{{ summary.accountsTotal }}</div>
+            </div>
+
+            <div class="metric-group">
+              <div class="metric-group-title">{{ $t('admin.analytics.registrations') }}</div>
+              <div class="metric-row">
+                <div class="metric-tile">
+                  <div class="metric-label">{{ $t('admin.analytics.week') }}</div>
+                  <div class="metric-value">{{ summary.registrationsWeek }}</div>
+                </div>
+                <div class="metric-tile">
+                  <div class="metric-label">{{ $t('admin.analytics.month') }}</div>
+                  <div class="metric-value">{{ summary.registrationsMonth }}</div>
+                </div>
+                <div class="metric-tile">
+                  <div class="metric-label">{{ $t('admin.analytics.year') }}</div>
+                  <div class="metric-value">{{ summary.registrationsYear }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="metric-group">
+              <div class="metric-group-title">{{ $t('admin.analytics.payments') }}</div>
+              <div class="metric-row">
+                <div class="metric-tile">
+                  <div class="metric-label">{{ $t('admin.analytics.week') }}</div>
+                  <div class="metric-value">{{ summary.paymentsWeek }}</div>
+                </div>
+                <div class="metric-tile">
+                  <div class="metric-label">{{ $t('admin.analytics.month') }}</div>
+                  <div class="metric-value">{{ summary.paymentsMonth }}</div>
+                </div>
+                <div class="metric-tile">
+                  <div class="metric-label">{{ $t('admin.analytics.year') }}</div>
+                  <div class="metric-value">{{ summary.paymentsYear }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p v-if="summary?.generatedAt" class="generated-at">
+            {{ $t('admin.analytics.generatedAt') }}: {{ formatBackupDate(summary.generatedAt) }}
+          </p>
+        </div>
+
+        <div class="card chart-card">
+          <h2 class="card-title">{{ $t('admin.analytics.chartTitle') }}</h2>
+
+          <div class="chart-controls">
+            <div class="control-group">
+              <span class="control-label">{{ $t('admin.analytics.metric') }}:</span>
+              <button
+                v-for="m in ['registrations', 'payments']"
+                :key="m"
+                class="toggle-btn"
+                :class="{ 'toggle-active': chartMetric === m }"
+                @click="chartMetric = m"
+              >
+                {{ $t(`admin.analytics.${m}`) }}
+              </button>
+            </div>
+            <div class="control-group">
+              <span class="control-label">{{ $t('admin.analytics.range') }}:</span>
+              <button
+                v-for="r in ['week', 'month', 'year']"
+                :key="r"
+                class="toggle-btn"
+                :class="{ 'toggle-active': chartRange === r }"
+                @click="chartRange = r"
+              >
+                {{ $t(`admin.analytics.${r}`) }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="chartLoading" class="panel-state">{{ $t('admin.backups.loading') }}</div>
+          <div v-else-if="chartError" class="panel-state status-err">{{ chartError }}</div>
+          <div v-else-if="!chartData.length" class="panel-state muted">{{ $t('admin.analytics.noData') }}</div>
+
+          <div v-else class="chart-wrap">
+            <svg :viewBox="`0 0 ${chartW} ${chartH}`" class="chart-svg" preserveAspectRatio="none">
+              <!-- y-axis grid lines -->
+              <g class="grid">
+                <line
+                  v-for="i in 4"
+                  :key="i"
+                  :x1="chartPadL"
+                  :x2="chartW - chartPadR"
+                  :y1="chartPadT + (i - 1) * (chartH - chartPadT - chartPadB) / 4"
+                  :y2="chartPadT + (i - 1) * (chartH - chartPadT - chartPadB) / 4"
+                />
+              </g>
+              <!-- y-axis labels -->
+              <g class="axis-text">
+                <text
+                  v-for="i in 5"
+                  :key="i"
+                  :x="chartPadL - 6"
+                  :y="chartPadT + (i - 1) * (chartH - chartPadT - chartPadB) / 4 + 4"
+                  text-anchor="end"
+                >
+                  {{ Math.round(chartMaxValue * (4 - (i - 1)) / 4) }}
+                </text>
+              </g>
+              <!-- bars -->
+              <g>
+                <rect
+                  v-for="(bar, idx) in chartBars"
+                  :key="idx"
+                  :x="bar.x"
+                  :y="bar.y"
+                  :width="bar.w"
+                  :height="bar.h"
+                  class="chart-bar"
+                >
+                  <title>{{ bar.label }}: {{ bar.value }}</title>
+                </rect>
+              </g>
+              <!-- x-axis labels -->
+              <g class="axis-text">
+                <text
+                  v-for="(bar, idx) in chartBars"
+                  v-show="shouldShowTick(idx)"
+                  :key="`x${idx}`"
+                  :x="bar.x + bar.w / 2"
+                  :y="chartH - chartPadB + 16"
+                  text-anchor="middle"
+                >
+                  {{ bar.tick }}
+                </text>
+              </g>
+              <!-- baseline -->
+              <line
+                :x1="chartPadL"
+                :x2="chartW - chartPadR"
+                :y1="chartH - chartPadB"
+                :y2="chartH - chartPadB"
+                class="axis-line"
+              />
+            </svg>
+          </div>
+        </div>
       </div>
 
       <!-- ── DB Backup tab ────────────────────────────────────────────────── -->
@@ -256,7 +422,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import api from '../api'
@@ -265,9 +431,9 @@ import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
 const auth   = useAuthStore()
-const { t }  = useI18n()
+const { t, locale } = useI18n()
 
-const activeTab = ref('dbBackup')
+const activeTab = ref('analytics')
 
 // ── Credentials ───────────────────────────────────────────────────────────────
 const credForm    = ref({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' })
@@ -335,7 +501,11 @@ async function fetchBackups() {
   }
 }
 
-onMounted(fetchBackups)
+onMounted(() => {
+  fetchBackups()
+  fetchSummary()
+  fetchChart()
+})
 
 // ── Backup ────────────────────────────────────────────────────────────────────
 const backupLoading = ref(false)
@@ -447,6 +617,148 @@ async function deleteAllDemo() {
     demoDeleteLoading.value = false
   }
 }
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+const summary        = ref(null)
+const summaryLoading = ref(false)
+const summaryError   = ref('')
+
+const chartMetric  = ref('registrations')
+const chartRange   = ref('week')
+const chartData    = ref([])
+const chartLoading = ref(false)
+const chartError   = ref('')
+
+const chartW     = 800
+const chartH     = 300
+const chartPadL  = 40
+const chartPadR  = 12
+const chartPadT  = 12
+const chartPadB  = 36
+
+async function fetchSummary() {
+  summaryLoading.value = true
+  summaryError.value   = ''
+  try {
+    const { data } = await api.get('/metrics/summary')
+    summary.value = data
+  } catch (e) {
+    const detail = e.response?.data?.detail || e.response?.data?.message
+    summaryError.value = detail || t('admin.analytics.error')
+  } finally {
+    summaryLoading.value = false
+  }
+}
+
+function pad2(n) { return String(n).padStart(2, '0') }
+
+function formatLocalDateTime(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T` +
+         `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
+}
+
+function rangeParams(range) {
+  const now = new Date()
+  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
+  if (range === 'week') {
+    const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
+    return { granularity: 'day', from, to }
+  }
+  if (range === 'month') {
+    const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29)
+    return { granularity: 'day', from, to }
+  }
+  // year
+  const from = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+  return { granularity: 'month', from, to }
+}
+
+async function fetchChart() {
+  chartLoading.value = true
+  chartError.value   = ''
+  try {
+    const { granularity, from, to } = rangeParams(chartRange.value)
+    const { data } = await api.get('/metrics/series', {
+      params: {
+        metric: chartMetric.value,
+        granularity,
+        from: formatLocalDateTime(from),
+        to:   formatLocalDateTime(to),
+      },
+    })
+    chartData.value = data.map(b => ({
+      bucket: parseBackendDate(b.bucket),
+      value:  b.value,
+    }))
+  } catch (e) {
+    const detail = e.response?.data?.detail || e.response?.data?.message
+    chartError.value = detail || t('admin.analytics.error')
+    chartData.value  = []
+  } finally {
+    chartLoading.value = false
+  }
+}
+
+function parseBackendDate(value) {
+  if (!value) return null
+  if (Array.isArray(value)) {
+    return new Date(value[0], (value[1] ?? 1) - 1, value[2] ?? 1, value[3] ?? 0, value[4] ?? 0, value[5] ?? 0)
+  }
+  return new Date(value)
+}
+
+const chartMaxValue = computed(() => {
+  const max = chartData.value.reduce((m, b) => Math.max(m, b.value), 0)
+  return max > 0 ? max : 1
+})
+
+function formatTick(date, range) {
+  if (!date) return ''
+  if (range === 'year') {
+    return date.toLocaleDateString(locale.value, { month: 'short' })
+  }
+  return date.toLocaleDateString(locale.value, { month: 'short', day: 'numeric' })
+}
+
+function formatTooltip(date, range) {
+  if (!date) return ''
+  if (range === 'year') {
+    return date.toLocaleDateString(locale.value, { month: 'long', year: 'numeric' })
+  }
+  return date.toLocaleDateString(locale.value, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+const chartBars = computed(() => {
+  const data = chartData.value
+  if (!data.length) return []
+  const innerW = chartW - chartPadL - chartPadR
+  const innerH = chartH - chartPadT - chartPadB
+  const slot = innerW / data.length
+  const barW = Math.max(2, slot * 0.7)
+  const max = chartMaxValue.value
+  return data.map((b, i) => {
+    const h = (b.value / max) * innerH
+    return {
+      x: chartPadL + i * slot + (slot - barW) / 2,
+      y: chartH - chartPadB - h,
+      w: barW,
+      h,
+      value: b.value,
+      tick: formatTick(b.bucket, chartRange.value),
+      label: formatTooltip(b.bucket, chartRange.value),
+    }
+  })
+})
+
+function shouldShowTick(idx) {
+  const total = chartBars.value.length
+  if (total <= 12) return true
+  // Roughly cap to 12 visible labels.
+  const step = Math.ceil(total / 12)
+  return idx % step === 0 || idx === total - 1
+}
+
+watch([chartMetric, chartRange], fetchChart)
 
 // ── Formatting ────────────────────────────────────────────────────────────────
 function formatBackupDate(value) {
@@ -649,4 +961,113 @@ tr:hover td { filter: brightness(.97); }
 .modal-title { font-size: 16px; font-weight: 700; color: var(--primary); margin-bottom: 12px; }
 .confirm-msg { font-size: 14px; color: var(--text); line-height: 1.5; word-break: break-all; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+/* Analytics */
+.analytics-header-card { gap: 18px; }
+.metrics-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) 1fr 1fr;
+  gap: 18px;
+  align-items: stretch;
+}
+.metric-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.metric-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.metric-tile {
+  background: var(--bg, #f7f7f8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.metric-total {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  justify-content: center;
+}
+.metric-total .metric-label { color: rgba(255,255,255,.85); }
+.metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--text-muted);
+}
+.metric-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+}
+.metric-total .metric-value { color: #fff; font-size: 32px; }
+.generated-at { font-size: 12px; color: var(--text-muted); margin: 0; }
+
+.chart-card { gap: 16px; }
+.chart-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  align-items: center;
+}
+.control-group { display: flex; align-items: center; gap: 6px; }
+.control-label {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+.toggle-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.toggle-btn:hover { color: var(--text); }
+.toggle-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.toggle-active:hover { color: #fff; }
+
+.chart-wrap { width: 100%; overflow-x: auto; }
+.chart-svg {
+  width: 100%;
+  height: 320px;
+  display: block;
+}
+.chart-bar { fill: var(--primary); transition: opacity .15s; }
+.chart-bar:hover { opacity: .75; }
+.grid line { stroke: var(--border); stroke-width: 1; }
+.axis-line { stroke: var(--border); stroke-width: 1; }
+.axis-text { font-size: 11px; fill: var(--text-muted); }
+
+@media (max-width: 900px) {
+  .metrics-grid { grid-template-columns: 1fr; }
+}
 </style>
