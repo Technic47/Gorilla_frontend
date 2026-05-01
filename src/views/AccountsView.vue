@@ -854,8 +854,8 @@ async function fetchPage() {
       }
     })
     rows.value = data.content ?? []
-    totalPages.value = data.totalPages ?? 0
-    totalElements.value = data.totalElements ?? 0
+    totalPages.value = data.page?.totalPages ?? 0
+    totalElements.value = data.page?.totalElements ?? 0
   } catch (e) {
     error.value = e.response?.data?.detail || t('accounts.errorDefault')
   } finally {
