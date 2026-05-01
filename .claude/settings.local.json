@@ -10,7 +10,12 @@
       "Bash(python -c \"import sys,json; p=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:p[k] for k in ['exports','main','module'] if k in p}, indent=2\\)\\)\")",
       "Bash(node -e \"const p=require\\('./node_modules/barcode-detector/package.json'\\); console.log\\(JSON.stringify\\({exports:p.exports,main:p.main,module:p.module},null,2\\)\\)\")",
       "Bash(node -e \"import\\('./node_modules/barcode-detector/dist/es/ponyfill.js'\\).then\\(m => console.log\\(Object.keys\\(m\\)\\)\\)\")",
-      "Bash(xargs grep *)"
+      "Bash(xargs grep *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Techn\\\\Documents\\\\JavaProjects\\\\Gorilla\\\\frontend\" -Recurse -Directory)",
+      "Bash(Select-Object -First 50)",
+      "Bash(Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Techn\\\\Documents\\\\JavaProjects\\\\Gorilla\\\\frontend\" -File | Where-Object {$_.Extension -in @\\('.json', '.config.js', '.config.mjs'\\)} | Select-Object Name)",
+      "Bash(grep -E \"\\\\.\\(js|config|json\\)$\")"
     ]
   }
 }

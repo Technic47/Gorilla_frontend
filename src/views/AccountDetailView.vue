@@ -70,7 +70,14 @@
           <div class="info-grid">
             <div class="info-item" v-for="field in infoFields" :key="field.key">
               <span class="info-label">{{ field.label }}</span>
-              <span class="info-value" :class="{ 'badge-blocked': field.key === 'isBlocked' && account.isBlocked }">
+              <span
+                class="info-value"
+                :class="{
+                  'badge-blocked':   field.key === 'isBlocked' && account.isBlocked,
+                  'highlight-paid':  field.key === 'paidUntil',
+                  'highlight-paid--expired': field.key === 'paidUntil' && isPaidExpired,
+                }"
+              >
                 {{ formatField(account[field.key], field.key) }}
               </span>
             </div>
@@ -122,15 +129,19 @@
               <table>
                 <thead>
                   <tr>
-                    <th>{{ $t('detail.payments.col.date') }}</th>
+                    <th>{{ $t('detail.payments.col.created') }}</th>
+                    <th>{{ $t('detail.payments.col.dateFrom') }}</th>
+                    <th>{{ $t('detail.payments.col.dateTo') }}</th>
                     <th>{{ $t('detail.payments.col.period') }}</th>
                     <th>{{ $t('detail.payments.col.description') }}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="p in payments" :key="p.id">
-                    <td class="pay-date">{{ p.created ? formatDate(p.created) : '—' }}</td>
-                    <td>{{ formatPeriod(p.period) }}</td>
+                    <td class="pay-date">{{ formatDate(p.created) }}</td>
+                    <td class="pay-date">{{ formatDate(p.dateFrom, true) }}</td>
+                    <td class="pay-date">{{ formatDate(p.dateTo, true) }}</td>
+                    <td>{{ formatPeriod(p.product?.period ?? p.period) }}</td>
                     <td>{{ p.description ?? '—' }}</td>
                   </tr>
                 </tbody>
@@ -197,15 +208,26 @@
         <h3 class="modal-title">{{ $t('detail.modal.title') }}</h3>
 
         <div class="field">
-          <label>{{ $t('detail.modal.paidUntil') }}</label>
-          <input type="date" v-model="modalDate" />
+          <label>{{ $t('detail.modal.paidUntilInfo') }}</label>
+          <span class="info-val">{{ formatField(account?.paidUntil, 'paidUntil') }}</span>
         </div>
 
-        <div class="presets">
-          <button type="button" class="btn-preset" @click="applyPreset(1)">{{ $t('detail.modal.month1') }}</button>
-          <button type="button" class="btn-preset" @click="applyPreset(3)">{{ $t('detail.modal.month3') }}</button>
-          <button type="button" class="btn-preset" @click="applyPreset(6)">{{ $t('detail.modal.halfYear') }}</button>
-          <button type="button" class="btn-preset" @click="applyPreset(12)">{{ $t('detail.modal.year1') }}</button>
+        <div class="field">
+          <label>{{ $t('detail.modal.productSelect') }}</label>
+          <div v-if="productsLoading" class="modal-hint">{{ $t('accounts.loading') }}</div>
+          <p v-else-if="products.length === 0" class="modal-hint muted">{{ $t('detail.modal.noProducts') }}</p>
+          <div v-else class="presets">
+            <button
+              v-for="p in products"
+              :key="p.id"
+              type="button"
+              class="btn-preset"
+              :class="{ 'btn-preset--active': selectedProductId === p.id }"
+              @click="selectedProductId = p.id"
+            >
+              {{ p.name }}
+            </button>
+          </div>
         </div>
 
         <p v-if="modalError" class="error-msg">{{ modalError }}</p>
@@ -214,7 +236,7 @@
           <button class="btn-secondary" :disabled="modalLoading" @click="closeModal">
             {{ $t('detail.modal.cancel') }}
           </button>
-          <button class="btn-primary" :disabled="modalLoading || !modalDate" @click="submitPayment">
+          <button class="btn-primary" :disabled="modalLoading || !selectedProductId" @click="submitPayment">
             {{ modalLoading ? '…' : $t('detail.modal.confirm') }}
           </button>
         </div>
@@ -310,9 +332,12 @@ async function fetchPayments() {
   try {
     const { data } = await api.get(`/payment/user/${route.params.id}`)
     payments.value = data.slice().sort((a, b) => {
-      const ta = Array.isArray(a.created) ? new Date(Date.UTC(a.created[0], a.created[1]-1, a.created[2], a.created[3]??0, a.created[4]??0)) : new Date(a.created)
-      const tb = Array.isArray(b.created) ? new Date(Date.UTC(b.created[0], b.created[1]-1, b.created[2], b.created[3]??0, b.created[4]??0)) : new Date(b.created)
-      return tb - ta
+      const ta = parseBackendDate(a.dateTo)
+      const tb = parseBackendDate(b.dateTo)
+      if (ta && tb) return tb - ta
+      if (ta) return -1
+      if (tb) return 1
+      return 0
     })
   } catch (e) {
     paymentsError.value = e.response?.data?.detail || t('detail.payments.error')
@@ -321,10 +346,38 @@ async function fetchPayments() {
   }
 }
 
+function parseBackendDate(value) {
+  if (!value) return null
+  if (Array.isArray(value)) {
+    return new Date(Date.UTC(value[0], value[1] - 1, value[2], value[3] ?? 0, value[4] ?? 0, value[5] ?? 0))
+  }
+  return new Date(value)
+}
+
+const isPaidExpired = computed(() => {
+  if (!account.value?.paidUntil) return true
+  return parseBackendDate(account.value.paidUntil) < new Date()
+})
+
 const modalOpen    = ref(false)
-const modalDate    = ref('')
 const modalLoading = ref(false)
 const modalError   = ref('')
+
+const products           = ref([])
+const productsLoading    = ref(false)
+const selectedProductId  = ref(null)
+
+async function fetchProducts() {
+  productsLoading.value = true
+  try {
+    const { data } = await api.get('/product')
+    products.value = data
+  } catch {
+    products.value = []
+  } finally {
+    productsLoading.value = false
+  }
+}
 
 const blockLoading = ref(false)
 const blockError   = ref('')
@@ -434,9 +487,10 @@ async function toggleBlock() {
 
 // ── Payment modal ─────────────────────────────────────────────────────────────
 function openModal() {
-  modalDate.value    = toDateInputValue(account.value?.paidUntil)
-  modalError.value   = ''
-  modalOpen.value    = true
+  selectedProductId.value = null
+  modalError.value        = ''
+  modalOpen.value         = true
+  fetchProducts()
 }
 
 function closeModal() {
@@ -448,8 +502,9 @@ async function submitPayment() {
   modalLoading.value = true
   modalError.value   = ''
   try {
-    await api.patch(`/account/${route.params.id}/paid-until`, null, {
-      params: { newDate: `${modalDate.value}T00:00:00` }
+    await api.post('/payment', {
+      accountId: Number(route.params.id),
+      productId: selectedProductId.value,
     })
     modalOpen.value = false
     await fetchAccount()
@@ -461,15 +516,6 @@ async function submitPayment() {
   } finally {
     modalLoading.value = false
   }
-}
-
-function applyPreset(months) {
-  // Extend from paidUntil if it's in the future, otherwise from today
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const base = new Date(Math.max(today, new Date(toDateInputValue(account.value?.paidUntil) || today)))
-  base.setMonth(base.getMonth() + months)
-  modalDate.value = toDateInputValue([base.getFullYear(), base.getMonth() + 1, base.getDate()])
 }
 
 function toDateInputValue(value) {
@@ -748,6 +794,9 @@ function levelClass(level) {
   transition: background 0.15s, color 0.15s;
 }
 .btn-preset:hover { background: var(--primary); color: #fff; opacity: 1; }
+.btn-preset--active { background: var(--primary); color: #fff; }
+.info-val { font-size: 14px; color: var(--text); }
+.modal-hint { font-size: 13px; color: var(--text-muted); padding: 4px 0; }
 
 .field-checkbox label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text); }
 .field-checkbox input { width: auto; cursor: pointer; }
@@ -887,6 +936,17 @@ function levelClass(level) {
 .info-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); }
 .info-value { font-size: 14px; font-weight: 500; color: var(--text); word-break: break-word; }
 .badge-blocked { color: var(--danger); font-weight: 700; }
+.highlight-paid {
+  color: #2e7d32;
+  font-weight: 700;
+  background: #e8f5e9;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+.highlight-paid--expired {
+  color: var(--danger);
+  background: #ffebee;
+}
 
 /* Warnings table */
 .no-warn { color: var(--text-muted); font-size: 13px; padding: 16px 0 0; }
