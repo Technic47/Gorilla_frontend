@@ -312,15 +312,26 @@
         <h3 class="modal-title">{{ $t('detail.modal.title') }}</h3>
 
         <div class="field">
-          <label>{{ $t('detail.modal.paidUntil') }}</label>
-          <input type="date" v-model="payModalDate"/>
+          <label>{{ $t('detail.modal.paidUntilInfo') }}</label>
+          <span class="info-val">{{ formatCell(selectedAccount?.paidUntil, 'paidUntil') }}</span>
         </div>
 
-        <div class="presets">
-          <button type="button" class="btn-preset" @click="applyPreset(1)">{{ $t('detail.modal.month1') }}</button>
-          <button type="button" class="btn-preset" @click="applyPreset(3)">{{ $t('detail.modal.month3') }}</button>
-          <button type="button" class="btn-preset" @click="applyPreset(6)">{{ $t('detail.modal.halfYear') }}</button>
-          <button type="button" class="btn-preset" @click="applyPreset(12)">{{ $t('detail.modal.year1') }}</button>
+        <div class="field">
+          <label>{{ $t('detail.modal.productSelect') }}</label>
+          <div v-if="payProductsLoading" class="modal-hint">{{ $t('accounts.loading') }}</div>
+          <p v-else-if="payProducts.length === 0" class="modal-hint muted">{{ $t('detail.modal.noProducts') }}</p>
+          <div v-else class="presets">
+            <button
+              v-for="p in payProducts"
+              :key="p.id"
+              type="button"
+              class="btn-preset"
+              :class="{ 'btn-preset--active': paySelectedProductId === p.id }"
+              @click="paySelectedProductId = p.id"
+            >
+              {{ p.name }}
+            </button>
+          </div>
         </div>
 
         <p v-if="payModalError" class="error-msg">{{ payModalError }}</p>
@@ -329,7 +340,7 @@
           <button class="btn-secondary" :disabled="payModalLoading" @click="closePayModal">
             {{ $t('detail.modal.cancel') }}
           </button>
-          <button class="btn-primary" :disabled="payModalLoading || !payModalDate" @click="submitPayment">
+          <button class="btn-primary" :disabled="payModalLoading || !paySelectedProductId" @click="submitPayment">
             {{ payModalLoading ? '…' : $t('detail.modal.confirm') }}
           </button>
         </div>
@@ -586,15 +597,31 @@ async function toggleBlock() {
 }
 
 // ── Payment modal ─────────────────────────────────────────────────────────────
-const payModalOpen = ref(false)
-const payModalDate = ref('')
+const payModalOpen    = ref(false)
 const payModalLoading = ref(false)
-const payModalError = ref('')
+const payModalError   = ref('')
+
+const payProducts          = ref([])
+const payProductsLoading   = ref(false)
+const paySelectedProductId = ref(null)
+
+async function fetchPayProducts() {
+  payProductsLoading.value = true
+  try {
+    const { data } = await api.get('/product')
+    payProducts.value = data
+  } catch {
+    payProducts.value = []
+  } finally {
+    payProductsLoading.value = false
+  }
+}
 
 function openPayModal() {
-  payModalDate.value = toDateInputValue(selectedAccount.value?.paidUntil)
-  payModalError.value = ''
-  payModalOpen.value = true
+  paySelectedProductId.value = null
+  payModalError.value        = ''
+  payModalOpen.value         = true
+  fetchPayProducts()
 }
 
 function closePayModal() {
@@ -604,10 +631,11 @@ function closePayModal() {
 
 async function submitPayment() {
   payModalLoading.value = true
-  payModalError.value = ''
+  payModalError.value   = ''
   try {
-    await api.patch(`/account/${selectedAccount.value.id}/paid-until`, null, {
-      params: {newDate: `${payModalDate.value}T00:00:00`}
+    await api.post('/payment', {
+      accountId: selectedAccount.value.id,
+      productId: paySelectedProductId.value,
     })
     payModalOpen.value = false
     await refreshSelected()
@@ -619,14 +647,6 @@ async function submitPayment() {
   } finally {
     payModalLoading.value = false
   }
-}
-
-function applyPreset(months) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const base = new Date(Math.max(today, new Date(toDateInputValue(selectedAccount.value?.paidUntil) || today)))
-  base.setMonth(base.getMonth() + months)
-  payModalDate.value = toDateInputValue([base.getFullYear(), base.getMonth() + 1, base.getDate()])
 }
 
 // ── Avatar upload ─────────────────────────────────────────────────────────────
@@ -834,8 +854,8 @@ async function fetchPage() {
       }
     })
     rows.value = data.content ?? []
-    totalPages.value = data.totalPages ?? 0
-    totalElements.value = data.totalElements ?? 0
+    totalPages.value = data.page?.totalPages ?? 0
+    totalElements.value = data.page?.totalElements ?? 0
   } catch (e) {
     error.value = e.response?.data?.detail || t('accounts.errorDefault')
   } finally {
@@ -1683,6 +1703,9 @@ tr.selected-row td {
 }
 
 .btn-preset:hover { background: var(--primary); color: #fff; opacity: 1; }
+.btn-preset--active { background: var(--primary); color: #fff; }
+.info-val { font-size: 14px; color: var(--text); }
+.modal-hint { font-size: 13px; color: var(--text-muted); padding: 4px 0; }
 
 .input-with-btn {
   display: flex;

@@ -25,6 +25,13 @@
         </button>
         <button
           class="tab-btn"
+          :class="{ 'tab-active': activeTab === 'products' }"
+          @click="activeTab = 'products'"
+        >
+          {{ $t('admin.tabs.products') }}
+        </button>
+        <button
+          class="tab-btn"
           :class="{ 'tab-active': activeTab === 'dbBackup' }"
           @click="activeTab = 'dbBackup'"
         >
@@ -337,6 +344,55 @@
         </div>
       </div>
 
+      <!-- ── Products tab ──────────────────────────────────────────────────── -->
+      <div v-if="activeTab === 'products'" class="tab-content">
+        <div class="card">
+          <div class="panel-title-row">
+            <h2 class="card-title">{{ $t('admin.products.title') }}</h2>
+            <div class="title-actions">
+              <button class="btn-secondary refresh-btn" :disabled="productsLoading" @click="fetchProducts">
+                {{ $t('admin.backups.refresh') }}
+              </button>
+              <button class="btn-primary btn-sm" @click="openAddProduct">
+                {{ $t('admin.products.add') }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="productsLoading" class="panel-state">{{ $t('admin.backups.loading') }}</div>
+          <div v-else-if="productsError" class="panel-state status-err">{{ productsError }}</div>
+          <div v-else-if="products.length === 0" class="panel-state muted">{{ $t('admin.products.empty') }}</div>
+
+          <div v-else class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ $t('admin.products.col.id') }}</th>
+                  <th>{{ $t('admin.products.col.description') }}</th>
+                  <th>{{ $t('admin.products.col.comment') }}</th>
+                  <th>{{ $t('admin.products.col.price') }}</th>
+                  <th>{{ $t('admin.products.col.period') }}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="p in products" :key="p.id">
+                  <td>{{ p.id }}</td>
+                  <td>{{ p.description || '—' }}</td>
+                  <td>{{ p.comment || '—' }}</td>
+                  <td>{{ p.sum ?? '—' }}</td>
+                  <td>{{ formatPeriod(p.period) }}</td>
+                  <td class="col-actions">
+                    <button class="btn-secondary btn-sm" @click="openEditProduct(p)">{{ $t('admin.products.editBtn') }}</button>
+                    <button class="btn-danger btn-sm" style="margin-left:6px" @click="openDeleteProduct(p)">{{ $t('admin.products.deleteBtn') }}</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- ── Demo data tab ───────────────────────────────────────────────── -->
       <div v-if="activeTab === 'demoData'" class="tab-content">
         <div class="demo-layout">
@@ -402,6 +458,80 @@
     </div>
   </Teleport>
 
+  <!-- ── Product add / edit modal ─────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="productModalOpen" class="modal-overlay" @click.self="closeProductModal">
+      <div class="modal">
+        <h3 class="modal-title">
+          {{ productModalMode === 'add' ? $t('admin.products.addTitle') : $t('admin.products.editTitle') }}
+        </h3>
+
+        <div class="field">
+          <label>{{ $t('admin.products.fields.description') }}</label>
+          <input v-model="productForm.description" type="text" />
+        </div>
+        <div class="field">
+          <label>{{ $t('admin.products.fields.comment') }}</label>
+          <input v-model="productForm.comment" type="text" />
+        </div>
+        <div class="field">
+          <label>{{ $t('admin.products.fields.price') }}</label>
+          <input v-model="productForm.price" type="number" min="0" step="0.01" />
+        </div>
+        <div class="field">
+          <label>{{ $t('admin.products.fields.period') }}</label>
+          <div class="period-picker">
+            <input v-model.number="periodAmount" type="number" min="1" class="period-amount" />
+            <button
+              v-for="unit in ['week', 'month', 'year']"
+              :key="unit"
+              type="button"
+              class="toggle-btn"
+              :class="{ 'toggle-active': periodUnit === unit }"
+              @click="periodUnit = unit"
+            >
+              {{ $t(`admin.products.period.${unit}`) }}
+            </button>
+          </div>
+        </div>
+
+        <p v-if="productError" class="status-msg status-err">{{ productError }}</p>
+
+        <div class="modal-actions">
+          <button class="btn-secondary" :disabled="productLoading" @click="closeProductModal">
+            {{ $t('admin.products.cancelBtn') }}
+          </button>
+          <button
+            class="btn-primary"
+            :disabled="productLoading"
+            @click="submitProduct"
+          >
+            {{ productLoading ? '…' : $t('detail.modal.confirm') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- ── Product delete confirmation modal ─────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="productDeleteConfirmOpen" class="modal-overlay" @click.self="productDeleteConfirmOpen = false">
+      <div class="modal">
+        <h3 class="modal-title">{{ $t('admin.products.deleteConfirmTitle') }}</h3>
+        <p class="confirm-msg">{{ $t('admin.products.deleteConfirmMsg', { name: productToDelete?.description || productToDelete?.id }) }}</p>
+        <p v-if="productDeleteError" class="status-msg status-err">{{ productDeleteError }}</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" :disabled="productDeleteLoading" @click="productDeleteConfirmOpen = false">
+            {{ $t('admin.products.cancelBtn') }}
+          </button>
+          <button class="btn-danger" :disabled="productDeleteLoading" @click="confirmDeleteProduct">
+            {{ productDeleteLoading ? '…' : $t('admin.products.deleteConfirmBtn') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
   <!-- ── Restore confirmation modal ───────────────────────────────────────── -->
   <Teleport to="body">
     <div v-if="restoreConfirmOpen" class="modal-overlay" @click.self="restoreConfirmOpen = false">
@@ -422,7 +552,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import api from '../api'
@@ -505,6 +635,7 @@ onMounted(() => {
   fetchBackups()
   fetchSummary()
   fetchChart()
+  fetchProducts()
 })
 
 // ── Backup ────────────────────────────────────────────────────────────────────
@@ -760,7 +891,147 @@ function shouldShowTick(idx) {
 
 watch([chartMetric, chartRange], fetchChart)
 
+// ── Products ──────────────────────────────────────────────────────────────────
+const products        = ref([])
+const productsLoading = ref(false)
+const productsError   = ref('')
+
+async function fetchProducts() {
+  productsLoading.value = true
+  productsError.value   = ''
+  try {
+    const { data } = await api.get('/product')
+    products.value = data
+  } catch (e) {
+    const detail = e.response?.data?.detail || e.response?.data?.message
+    productsError.value = detail || t('admin.products.error')
+  } finally {
+    productsLoading.value = false
+  }
+}
+
+const productModalOpen = ref(false)
+const productModalMode = ref('add')
+const productForm      = reactive({ id: null, description: '', comment: '', price: '' })
+const productLoading   = ref(false)
+const productError     = ref('')
+
+const periodAmount = ref(1)
+const periodUnit   = ref('month')
+
+function buildPeriod() {
+  const n = Math.max(1, periodAmount.value || 1)
+  if (periodUnit.value === 'year') return `P${n}Y`
+  if (periodUnit.value === 'week') return `P${n * 7}D`
+  return `P${n}M`
+}
+
+function parsePeriod(str) {
+  if (!str) { periodAmount.value = 1; periodUnit.value = 'month'; return }
+  const m = str.match(/^P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?$/)
+  if (!m) { periodAmount.value = 1; periodUnit.value = 'month'; return }
+  const years  = parseInt(m[1] || 0)
+  const months = parseInt(m[2] || 0)
+  const days   = parseInt(m[3] || 0)
+  if (years && !months && !days)  { periodUnit.value = 'year';  periodAmount.value = years }
+  else if (months && !years && !days) { periodUnit.value = 'month'; periodAmount.value = months }
+  else if (days && !years && !months && days % 7 === 0) { periodUnit.value = 'week'; periodAmount.value = days / 7 }
+  else { periodUnit.value = 'month'; periodAmount.value = months || 1 }
+}
+
+function openAddProduct() {
+  Object.assign(productForm, { id: null, description: '', comment: '', price: '' })
+  periodAmount.value    = 1
+  periodUnit.value      = 'month'
+  productError.value    = ''
+  productModalMode.value = 'add'
+  productModalOpen.value = true
+}
+
+function openEditProduct(p) {
+  Object.assign(productForm, {
+    id:          p.id,
+    description: p.description ?? '',
+    comment:     p.comment ?? '',
+    price:       p.sum ?? '',
+  })
+  parsePeriod(p.period)
+  productError.value    = ''
+  productModalMode.value = 'edit'
+  productModalOpen.value = true
+}
+
+function closeProductModal() {
+  if (productLoading.value) return
+  productModalOpen.value = false
+}
+
+async function submitProduct() {
+  productLoading.value = true
+  productError.value   = ''
+  try {
+    const payload = {
+      description: productForm.description.trim() || null,
+      comment:     productForm.comment.trim() || null,
+      sum:         productForm.price !== '' ? Number(productForm.price) : null,
+      period:      buildPeriod(),
+    }
+    if (productModalMode.value === 'add') {
+      await api.post('/product', payload)
+    } else {
+      await api.put(`/product/${productForm.id}`, payload)
+    }
+    productModalOpen.value = false
+    fetchProducts()
+  } catch (e) {
+    const d = e.response?.data
+    productError.value = d?.detail || d?.message || t('admin.products.saveError')
+  } finally {
+    productLoading.value = false
+  }
+}
+
+const productDeleteConfirmOpen = ref(false)
+const productToDelete          = ref(null)
+const productDeleteLoading     = ref(false)
+const productDeleteError       = ref('')
+
+function openDeleteProduct(p) {
+  productToDelete.value          = p
+  productDeleteError.value       = ''
+  productDeleteConfirmOpen.value = true
+}
+
+async function confirmDeleteProduct() {
+  productDeleteLoading.value = true
+  productDeleteError.value   = ''
+  try {
+    await api.delete(`/product/${productToDelete.value.id}`)
+    productDeleteConfirmOpen.value = false
+    fetchProducts()
+  } catch (e) {
+    const d = e.response?.data
+    productDeleteError.value = d?.detail || d?.message || t('admin.products.deleteError')
+  } finally {
+    productDeleteLoading.value = false
+  }
+}
+
 // ── Formatting ────────────────────────────────────────────────────────────────
+function formatPeriod(p) {
+  if (!p) return '—'
+  const m = String(p).match(/^P(?:(-?\d+)Y)?(?:(-?\d+)M)?(?:(-?\d+)D)?$/)
+  if (!m) return String(p)
+  const years  = parseInt(m[1] || 0)
+  const months = parseInt(m[2] || 0)
+  const days   = parseInt(m[3] || 0)
+  const parts  = []
+  if (years)  parts.push(t('detail.payments.years',  { n: years }))
+  if (months) parts.push(t('detail.payments.months', { n: months }))
+  if (days)   parts.push(t('detail.payments.days',   { n: days }))
+  return parts.length ? parts.join(' ') : String(p)
+}
+
 function formatBackupDate(value) {
   if (!value) return '—'
   const d = Array.isArray(value)
@@ -906,6 +1177,7 @@ function formatSize(bytes) {
 }
 .panel-title-row .card-title { flex: 1; }
 .refresh-btn { font-size: 12px; padding: 5px 12px; flex-shrink: 0; align-self: flex-start; }
+.title-actions { display: flex; gap: 8px; align-items: flex-start; flex-shrink: 0; }
 
 .panel-state { padding: 24px; text-align: center; font-size: 13px; }
 .muted { color: var(--text-muted); }
@@ -936,6 +1208,8 @@ tr:hover td { filter: brightness(.97); }
 /* Form */
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field label { font-size: 13px; font-weight: 500; color: var(--text-muted); }
+.period-picker { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.period-amount { width: 70px; }
 .field-inline { flex-direction: row; align-items: center; gap: 12px; }
 .field-inline label { white-space: nowrap; }
 .input-days { width: 80px; }
