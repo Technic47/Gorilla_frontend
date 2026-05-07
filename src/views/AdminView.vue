@@ -46,10 +46,24 @@
         </button>
         <button
           class="tab-btn"
+          :class="{ 'tab-active': activeTab === 'notes' }"
+          @click="activeTab = 'notes'"
+        >
+          {{ $t('admin.tabs.notes') }}
+        </button>
+        <button
+          class="tab-btn"
           :class="{ 'tab-active': activeTab === 'demoData' }"
           @click="activeTab = 'demoData'"
         >
           {{ $t('admin.tabs.demoData') }}
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ 'tab-active': activeTab === 'instructions' }"
+          @click="activeTab = 'instructions'"
+        >
+          {{ $t('admin.tabs.instructions') }}
         </button>
       </div>
 
@@ -393,6 +407,193 @@
         </div>
       </div>
 
+      <!-- ── Instructions tab ──────────────────────────────────────────────── -->
+      <div v-if="activeTab === 'instructions'" class="tab-content">
+        <div class="instr-tabs">
+          <button
+            v-for="tab in ['newAccount', 'payment', 'avatar', 'overview']"
+            :key="tab"
+            class="instr-tab-btn"
+            :class="{ 'instr-tab-active': instrTab === tab }"
+            @click="instrTab = tab"
+          >
+            {{ $t(`admin.instructions.tabs.${tab}`) }}
+          </button>
+        </div>
+
+        <!-- New Account workflow -->
+        <div v-if="instrTab === 'newAccount'" class="instr-content">
+          <div class="instr-header">
+            <div class="instr-title">{{ $t('admin.instructions.newAccount.title') }}</div>
+            <div class="instr-desc">{{ $t('admin.instructions.newAccount.intro') }}</div>
+          </div>
+          <div class="instr-steps">
+            <template v-for="(_, i) in Array(6)" :key="i">
+              <div class="instr-step" :class="{ 'instr-step--optional': i >= 4 }">
+                <div class="step-num">{{ i + 1 }}</div>
+                <div class="step-icon">{{ ['📋','✏️','✅','👤','🖼️','💳'][i] }}</div>
+                <div class="step-body">
+                  <div class="step-title">
+                    {{ $t(`admin.instructions.newAccount.step${i + 1}.title`) }}
+                    <span v-if="i >= 4" class="opt-badge">{{ $t('admin.instructions.optional') }}</span>
+                  </div>
+                  <div class="step-desc">{{ $t(`admin.instructions.newAccount.step${i + 1}.desc`) }}</div>
+                </div>
+              </div>
+              <div v-if="i < 5" class="step-arrow">→</div>
+            </template>
+          </div>
+          <div class="instr-tip">💡 {{ $t('admin.instructions.newAccount.tip') }}</div>
+        </div>
+
+        <!-- Payment workflow -->
+        <div v-if="instrTab === 'payment'" class="instr-content">
+          <div class="instr-header">
+            <div class="instr-title">{{ $t('admin.instructions.payment.title') }}</div>
+            <div class="instr-desc">{{ $t('admin.instructions.payment.intro') }}</div>
+          </div>
+          <div class="instr-steps">
+            <template v-for="(_, i) in Array(4)" :key="i">
+              <div class="instr-step">
+                <div class="step-num">{{ i + 1 }}</div>
+                <div class="step-icon">{{ ['👤','💰','📦','✅'][i] }}</div>
+                <div class="step-body">
+                  <div class="step-title">{{ $t(`admin.instructions.payment.step${i + 1}.title`) }}</div>
+                  <div class="step-desc">{{ $t(`admin.instructions.payment.step${i + 1}.desc`) }}</div>
+                </div>
+              </div>
+              <div v-if="i < 3" class="step-arrow">→</div>
+            </template>
+          </div>
+          <div class="instr-info">ℹ️ {{ $t('admin.instructions.payment.info') }}</div>
+        </div>
+
+        <!-- Avatar workflow -->
+        <div v-if="instrTab === 'avatar'" class="instr-content">
+          <div class="instr-header">
+            <div class="instr-title">{{ $t('admin.instructions.avatar.title') }}</div>
+            <div class="instr-desc">{{ $t('admin.instructions.avatar.intro') }}</div>
+          </div>
+          <div class="instr-steps">
+            <template v-for="(_, i) in Array(2)" :key="i">
+              <div class="instr-step">
+                <div class="step-num">{{ i + 1 }}</div>
+                <div class="step-icon">{{ ['👤','🖼️'][i] }}</div>
+                <div class="step-body">
+                  <div class="step-title">{{ $t(`admin.instructions.avatar.step${i + 1}.title`) }}</div>
+                  <div class="step-desc">{{ $t(`admin.instructions.avatar.step${i + 1}.desc`) }}</div>
+                </div>
+              </div>
+              <div class="step-arrow">→</div>
+            </template>
+          </div>
+          <div class="instr-methods">
+            <div class="method-col">
+              <div class="method-label">{{ $t('admin.instructions.avatar.fileMethod') }}</div>
+              <div class="instr-steps">
+                <template v-for="(_, i) in Array(2)" :key="i">
+                  <div class="instr-step">
+                    <div class="step-num">{{ i + 3 }}</div>
+                    <div class="step-icon">{{ ['📁','⬆️'][i] }}</div>
+                    <div class="step-body">
+                      <div class="step-title">{{ $t(`admin.instructions.avatar.fileStep${i + 1}.title`) }}</div>
+                      <div class="step-desc">{{ $t(`admin.instructions.avatar.fileStep${i + 1}.desc`) }}</div>
+                    </div>
+                  </div>
+                  <div v-if="i < 1" class="step-arrow">→</div>
+                </template>
+              </div>
+            </div>
+            <div class="method-divider">{{ $t('admin.instructions.or') }}</div>
+            <div class="method-col">
+              <div class="method-label">{{ $t('admin.instructions.avatar.cameraMethod') }}</div>
+              <div class="instr-steps">
+                <template v-for="(_, i) in Array(3)" :key="i">
+                  <div class="instr-step">
+                    <div class="step-num">{{ i + 3 }}</div>
+                    <div class="step-icon">{{ ['📷','✔️','📸'][i] }}</div>
+                    <div class="step-body">
+                      <div class="step-title">{{ $t(`admin.instructions.avatar.cameraStep${i + 1}.title`) }}</div>
+                      <div class="step-desc">{{ $t(`admin.instructions.avatar.cameraStep${i + 1}.desc`) }}</div>
+                    </div>
+                  </div>
+                  <div v-if="i < 2" class="step-arrow">→</div>
+                </template>
+              </div>
+            </div>
+          </div>
+          <div class="instr-tip">💡 {{ $t('admin.instructions.avatar.note') }}</div>
+        </div>
+
+        <!-- Overview -->
+        <div v-if="instrTab === 'overview'" class="instr-content">
+          <div class="instr-header">
+            <div class="instr-title">{{ $t('admin.instructions.overview.title') }}</div>
+            <div class="instr-desc">{{ $t('admin.instructions.overview.desc') }}</div>
+          </div>
+          <div class="instr-section-title">{{ $t('admin.instructions.overview.featuresTitle') }}</div>
+          <div class="feature-grid">
+            <div v-for="(feat, i) in overviewFeatures" :key="i" class="feature-card">
+              <div class="feature-icon">{{ feat.icon }}</div>
+              <div class="feature-title">{{ $t(`admin.instructions.overview.feature${i + 1}.title`) }}</div>
+              <div class="feature-desc">{{ $t(`admin.instructions.overview.feature${i + 1}.desc`) }}</div>
+            </div>
+          </div>
+          <div class="instr-section-title">{{ $t('admin.instructions.overview.warningsTitle') }}</div>
+          <div class="warn-legend">
+            <div class="warn-item"><div class="warn-swatch warn-white"></div><div>{{ $t('admin.instructions.overview.warnNone') }}</div></div>
+            <div class="warn-item"><div class="warn-swatch warn-yellow"></div><div>{{ $t('admin.instructions.overview.warnInfo') }}</div></div>
+            <div class="warn-item"><div class="warn-swatch warn-lightred"></div><div>{{ $t('admin.instructions.overview.warnWarning') }}</div></div>
+            <div class="warn-item"><div class="warn-swatch warn-brightred"></div><div>{{ $t('admin.instructions.overview.warnCritical') }}</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Notes tab ─────────────────────────────────────────────────────── -->
+      <div v-if="activeTab === 'notes'" class="tab-content">
+        <div class="card">
+          <div class="panel-title-row">
+            <h2 class="card-title">{{ $t('admin.notes.title') }}</h2>
+            <div class="title-actions">
+              <button class="btn-secondary refresh-btn" :disabled="notesLoading" @click="fetchNotes">
+                {{ $t('admin.backups.refresh') }}
+              </button>
+              <button class="btn-primary btn-sm" @click="openAddNote">
+                {{ $t('admin.notes.add') }}
+              </button>
+            </div>
+          </div>
+
+          <div v-if="notesLoading" class="panel-state">{{ $t('admin.backups.loading') }}</div>
+          <div v-else-if="notesError" class="panel-state status-err">{{ notesError }}</div>
+          <div v-else-if="notes.length === 0" class="panel-state muted">{{ $t('admin.notes.empty') }}</div>
+
+          <div v-else class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>{{ $t('admin.notes.col.created') }}</th>
+                  <th>{{ $t('admin.notes.col.header') }}</th>
+                  <th>{{ $t('admin.notes.col.body') }}</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="n in notes" :key="n.id">
+                  <td class="col-date note-date">{{ formatBackupDate(n.created) }}</td>
+                  <td class="note-header">{{ n.header || '—' }}</td>
+                  <td class="note-body">{{ n.body ? (n.body.length > 100 ? n.body.slice(0, 100) + '…' : n.body) : '—' }}</td>
+                  <td class="col-actions">
+                    <button class="btn-secondary btn-sm" @click="openEditNote(n)">{{ $t('admin.notes.editBtn') }}</button>
+                    <button class="btn-danger btn-sm" style="margin-left:6px" @click="openDeleteNote(n)">{{ $t('admin.notes.deleteBtn') }}</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- ── Demo data tab ───────────────────────────────────────────────── -->
       <div v-if="activeTab === 'demoData'" class="tab-content">
         <div class="demo-layout">
@@ -532,6 +733,56 @@
     </div>
   </Teleport>
 
+  <!-- ── Note add / edit modal ────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="noteModalOpen" class="modal-overlay" @click.self="closeNoteModal">
+      <div class="modal modal-note">
+        <h3 class="modal-title">
+          {{ noteModalMode === 'add' ? $t('admin.notes.addTitle') : $t('admin.notes.editTitle') }}
+        </h3>
+
+        <div class="field">
+          <label>{{ $t('admin.notes.fields.header') }}</label>
+          <input v-model="noteForm.header" type="text" />
+        </div>
+        <div class="field">
+          <label>{{ $t('admin.notes.fields.body') }}</label>
+          <textarea v-model="noteForm.body" class="note-textarea" rows="6" />
+        </div>
+
+        <p v-if="noteError" class="status-msg status-err">{{ noteError }}</p>
+
+        <div class="modal-actions">
+          <button class="btn-secondary" :disabled="noteLoading" @click="closeNoteModal">
+            {{ $t('admin.products.cancelBtn') }}
+          </button>
+          <button class="btn-primary" :disabled="noteLoading || !noteForm.body.trim()" @click="submitNote">
+            {{ noteLoading ? '…' : $t('detail.modal.confirm') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- ── Note delete confirmation modal ────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="noteDeleteConfirmOpen" class="modal-overlay" @click.self="noteDeleteConfirmOpen = false">
+      <div class="modal">
+        <h3 class="modal-title">{{ $t('admin.notes.deleteConfirmTitle') }}</h3>
+        <p class="confirm-msg">{{ $t('admin.notes.deleteConfirmMsg', { header: noteToDelete?.header || String(noteToDelete?.id) }) }}</p>
+        <p v-if="noteDeleteError" class="status-msg status-err">{{ noteDeleteError }}</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" :disabled="noteDeleteLoading" @click="noteDeleteConfirmOpen = false">
+            {{ $t('admin.products.cancelBtn') }}
+          </button>
+          <button class="btn-danger" :disabled="noteDeleteLoading" @click="confirmDeleteNote">
+            {{ noteDeleteLoading ? '…' : $t('admin.notes.deleteConfirmBtn') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
+
   <!-- ── Restore confirmation modal ───────────────────────────────────────── -->
   <Teleport to="body">
     <div v-if="restoreConfirmOpen" class="modal-overlay" @click.self="restoreConfirmOpen = false">
@@ -564,6 +815,16 @@ const auth   = useAuthStore()
 const { t, locale } = useI18n()
 
 const activeTab = ref('analytics')
+const instrTab  = ref('newAccount')
+
+const overviewFeatures = [
+  { icon: '👥' },
+  { icon: '💳' },
+  { icon: '🖼️' },
+  { icon: '📷' },
+  { icon: '📊' },
+  { icon: '🔧' },
+]
 
 // ── Credentials ───────────────────────────────────────────────────────────────
 const credForm    = ref({ currentPassword: '', newUsername: '', newPassword: '', confirmPassword: '' })
@@ -636,6 +897,7 @@ onMounted(() => {
   fetchSummary()
   fetchChart()
   fetchProducts()
+  fetchNotes()
 })
 
 // ── Backup ────────────────────────────────────────────────────────────────────
@@ -1017,6 +1279,104 @@ async function confirmDeleteProduct() {
   }
 }
 
+// ── Notes ─────────────────────────────────────────────────────────────────────
+const notes        = ref([])
+const notesLoading = ref(false)
+const notesError   = ref('')
+
+async function fetchNotes() {
+  notesLoading.value = true
+  notesError.value   = ''
+  try {
+    const { data } = await api.get('/note')
+    notes.value = data.slice().sort((a, b) => {
+      const ta = parseBackendDate(a.created)
+      const tb = parseBackendDate(b.created)
+      if (ta && tb) return tb - ta
+      return 0
+    })
+  } catch (e) {
+    const d = e.response?.data
+    notesError.value = d?.detail || d?.message || t('admin.notes.error')
+  } finally {
+    notesLoading.value = false
+  }
+}
+
+const noteModalOpen = ref(false)
+const noteModalMode = ref('add')
+const noteForm      = reactive({ id: null, header: '', body: '' })
+const noteLoading   = ref(false)
+const noteError     = ref('')
+
+function openAddNote() {
+  Object.assign(noteForm, { id: null, header: '', body: '' })
+  noteError.value    = ''
+  noteModalMode.value = 'add'
+  noteModalOpen.value = true
+}
+
+function openEditNote(n) {
+  Object.assign(noteForm, { id: n.id, header: n.header ?? '', body: n.body ?? '' })
+  noteError.value    = ''
+  noteModalMode.value = 'edit'
+  noteModalOpen.value = true
+}
+
+function closeNoteModal() {
+  if (noteLoading.value) return
+  noteModalOpen.value = false
+}
+
+async function submitNote() {
+  noteLoading.value = true
+  noteError.value   = ''
+  try {
+    const payload = {
+      header: noteForm.header.trim() || null,
+      body:   noteForm.body.trim(),
+    }
+    if (noteModalMode.value === 'add') {
+      await api.post('/note', payload)
+    } else {
+      await api.put(`/note/${noteForm.id}`, payload)
+    }
+    noteModalOpen.value = false
+    fetchNotes()
+  } catch (e) {
+    const d = e.response?.data
+    noteError.value = d?.detail || d?.message || t('admin.notes.saveError')
+  } finally {
+    noteLoading.value = false
+  }
+}
+
+const noteDeleteConfirmOpen = ref(false)
+const noteToDelete          = ref(null)
+const noteDeleteLoading     = ref(false)
+const noteDeleteError       = ref('')
+
+function openDeleteNote(n) {
+  noteToDelete.value          = n
+  noteDeleteError.value       = ''
+  noteDeleteConfirmOpen.value = true
+}
+
+async function confirmDeleteNote() {
+  noteDeleteLoading.value = true
+  noteDeleteError.value   = ''
+  try {
+    await api.delete(`/note/${noteToDelete.value.id}`)
+    noteDeleteConfirmOpen.value = false
+    fetchNotes()
+  } catch (e) {
+    const d = e.response?.data
+    noteDeleteError.value = d?.detail || d?.message || t('admin.notes.deleteError')
+  } finally {
+    noteDeleteLoading.value = false
+  }
+}
+
 // ── Formatting ────────────────────────────────────────────────────────────────
 function formatPeriod(p) {
   if (!p) return '—'
@@ -1344,4 +1704,220 @@ tr:hover td { filter: brightness(.97); }
 @media (max-width: 900px) {
   .metrics-grid { grid-template-columns: 1fr; }
 }
+
+/* Notes tab */
+.modal-note { max-width: 560px; }
+.note-textarea {
+  width: 100%;
+  resize: vertical;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  box-sizing: border-box;
+}
+.note-textarea:focus { outline: none; border-color: var(--primary); }
+.note-date   { white-space: nowrap; min-width: 130px; }
+.note-header { font-weight: 600; min-width: 120px; max-width: 200px; word-break: break-word; }
+.note-body   { color: var(--text-muted); font-size: 12px; max-width: 400px; word-break: break-word; }
+
+/* Instructions tab */
+.instr-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.instr-tab-btn {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.instr-tab-btn:hover { color: var(--text); border-color: var(--primary); }
+.instr-tab-active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.instr-tab-active:hover { color: #fff; }
+
+.instr-content { display: flex; flex-direction: column; gap: 20px; }
+
+.instr-header { display: flex; flex-direction: column; gap: 6px; }
+.instr-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--primary);
+}
+.instr-desc { font-size: 14px; color: var(--text-muted); line-height: 1.55; }
+
+.instr-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.instr-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  min-width: 180px;
+  max-width: 240px;
+  flex: 1 1 180px;
+}
+.instr-step--optional { border-style: dashed; opacity: .85; }
+
+.step-num {
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.step-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.step-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.step-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.step-desc { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+.step-arrow {
+  font-size: 20px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.opt-badge {
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--border);
+  color: var(--text-muted);
+  border-radius: 4px;
+  padding: 1px 5px;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+.instr-tip,
+.instr-info {
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+}
+.instr-tip {
+  background: #fffbe6;
+  border-left: 4px solid #f5a623;
+  color: #7a5a00;
+}
+.instr-info {
+  background: #e8f4fd;
+  border-left: 4px solid #2196f3;
+  color: #0d4f7a;
+}
+
+.instr-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--text-muted);
+  margin: 4px 0;
+}
+
+.instr-methods {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.method-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.method-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--primary);
+}
+.method-divider {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  align-self: center;
+  flex-shrink: 0;
+}
+
+/* Feature grid */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.feature-icon { font-size: 24px; }
+.feature-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.feature-desc  { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+
+/* Warning legend */
+.warn-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.warn-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+.warn-swatch {
+  width: 28px;
+  height: 20px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.warn-white     { background: #ffffff; }
+.warn-yellow    { background: #fff9c4; border-color: #f5a623; }
+.warn-lightred  { background: #ffcdd2; border-color: #e57373; }
+.warn-brightred { background: #f44336; border-color: #b71c1c; }
 </style>

@@ -118,10 +118,9 @@
           <span class="panel-title">{{ $t('detail.title') }}</span>
           <button
             v-if="selectedId"
-            class="panel-open-btn"
-            :title="$t('detail.openFull')"
+            class="btn-primary panel-open-btn"
             @click="router.push(`/account/${selectedId}`)"
-          >ℹ</button>
+          >{{ $t('detail.openFull') }}</button>
         </div>
 
         <div v-if="!selectedId && !detailLoading" class="panel-empty">
@@ -157,16 +156,12 @@
                 <tr>
                   <th>{{ $t('detail.warnCol.level') }}</th>
                   <th>{{ $t('detail.warnCol.message') }}</th>
-                  <th>{{ $t('detail.warnCol.type') }}</th>
-                  <th>{{ $t('detail.warnCol.created') }}</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr v-for="(w, i) in selectedAccount.warnings" :key="i">
                   <td><span :class="['level-badge', levelClass(w.level)]">{{ w.level }}</span></td>
                   <td>{{ w.message ?? '—' }}</td>
-                  <td>{{ w.type ?? '—' }}</td>
-                  <td>{{ w.created ? formatDate(w.created) : '—' }}</td>
                 </tr>
                 </tbody>
               </table>
@@ -329,7 +324,7 @@
               :class="{ 'btn-preset--active': paySelectedProductId === p.id }"
               @click="paySelectedProductId = p.id"
             >
-              {{ p.name }}
+              {{ p.description }}
             </button>
           </div>
         </div>
@@ -369,10 +364,6 @@
         <div class="field">
           <label>{{ $t('accounts.col.cardNumber') }}</label>
           <input v-model="updateForm.cardNumber" type="text" required/>
-        </div>
-        <div class="field">
-          <label>{{ $t('accounts.col.paidUntil') }}</label>
-          <input v-model="updateForm.paidUntil" type="date"/>
         </div>
         <div class="field field-checkbox">
           <label>
@@ -495,12 +486,9 @@ const infoFields = computed(() => [
   {key: 'firstName', label: t('accounts.col.firstName')},
   {key: 'secondName', label: t('accounts.col.secondName')},
   {key: 'lastName', label: t('accounts.col.lastName')},
-  {key: 'id', label: t('accounts.col.id')},
   {key: 'cardNumber', label: t('accounts.col.cardNumber')},
   {key: 'isBlocked', label: t('accounts.col.isBlocked')},
   {key: 'paidUntil', label: t('accounts.col.paidUntil')},
-  {key: 'created', label: t('accounts.col.created')},
-  {key: 'updated', label: t('accounts.col.updated')},
 ])
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -528,7 +516,7 @@ const detailError = ref('')
 const updateModalOpen = ref(false)
 const updateLoading = ref(false)
 const updateError = ref('')
-const updateForm = reactive({firstName: '', secondName: '', lastName: '', cardNumber: '', paidUntil: '', isBlocked: false})
+const updateForm = reactive({firstName: '', secondName: '', lastName: '', cardNumber: '', isBlocked: false})
 const updateFormValid = computed(() => updateForm.firstName.trim() && updateForm.lastName.trim() && updateForm.cardNumber.trim())
 
 function openUpdateModal() {
@@ -538,7 +526,6 @@ function openUpdateModal() {
     secondName: a.secondName ?? '',
     lastName: a.lastName ?? '',
     cardNumber: a.cardNumber ?? '',
-    paidUntil: toDateInputValue(a.paidUntil),
     isBlocked: a.isBlocked ?? false,
   })
   updateError.value = ''
@@ -560,7 +547,6 @@ async function submitUpdate() {
       secondName: updateForm.secondName.trim() || null,
       lastName: updateForm.lastName.trim(),
       cardNumber: updateForm.cardNumber.trim(),
-      paidUntil: updateForm.paidUntil ? `${updateForm.paidUntil}T00:00:00` : null,
       isBlocked: updateForm.isBlocked,
     }
     await api.put(`/account/${selectedAccount.value.id}`, payload)
@@ -633,9 +619,10 @@ async function submitPayment() {
   payModalLoading.value = true
   payModalError.value   = ''
   try {
+    const product = payProducts.value.find(p => p.id === paySelectedProductId.value)
     await api.post('/payment', {
       accountId: selectedAccount.value.id,
-      productId: paySelectedProductId.value,
+      product,
     })
     payModalOpen.value = false
     await refreshSelected()
@@ -803,15 +790,6 @@ async function refreshSelected() {
   }
 }
 
-function toDateInputValue(value) {
-  if (!value) return ''
-  if (Array.isArray(value)) {
-    const [y, m, d] = value
-    return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-  }
-  return String(value).slice(0, 10)
-}
-
 // ── Select account (detail panel) ─────────────────────────────────────────────
 async function selectAccount(id) {
   if (selectedId.value === id) {
@@ -833,11 +811,7 @@ async function selectAccount(id) {
   }
 }
 
-// ── Filtered rows (hideBlocked is still client-side; search is server-side) ───
-const filteredRows = computed(() => {
-  if (!hideBlocked.value) return rows.value
-  return rows.value.filter(row => !row.isBlocked)
-})
+const filteredRows = computed(() => rows.value)
 
 // ── Data fetching ─────────────────────────────────────────────────────────────
 async function fetchPage() {
@@ -851,6 +825,7 @@ async function fetchPage() {
         size: pageSize.value,
         sort: `${sortField.value},${sortDir.value}`,
         ...(q && { query: q }),
+        ...(hideBlocked.value && { isBlocked: false }),
       }
     })
     rows.value = data.content ?? []
@@ -862,6 +837,8 @@ async function fetchPage() {
     loading.value = false
   }
 }
+
+watch(hideBlocked, () => goPage(0))
 
 function goPage(n) {
   currentPage.value = n
@@ -1062,15 +1039,15 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
-  height: 56px;
+  padding: 0 16px;
+  height: 50px;
   background: var(--primary);
   color: #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, .2);
 }
 
 .topbar-brand {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: .3px;
   cursor: pointer;
@@ -1079,7 +1056,7 @@ onBeforeUnmount(() => {
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .admin-btn,
@@ -1087,15 +1064,15 @@ onBeforeUnmount(() => {
   color: #fff;
   border-color: rgba(255, 255, 255, .5);
   font-size: 13px;
-  padding: 6px 14px;
+  padding: 5px 12px;
 }
 
 /* Toolbar */
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 24px;
+  gap: 10px;
+  padding: 8px 16px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-wrap: wrap;
@@ -1216,8 +1193,8 @@ onBeforeUnmount(() => {
 /* Content area */
 .content-area {
   display: flex;
-  gap: 16px;
-  padding: 16px 24px 20px;
+  gap: 12px;
+  padding: 10px 16px 14px;
   align-items: flex-start;
   flex: 1;
 }
@@ -1338,15 +1315,15 @@ tr.selected-row td {
 
 /* Detail panel */
 .detail-panel {
-  width: 760px;
-  min-width: 500px;
+  width: 460px;
+  min-width: 280px;
   flex-shrink: 0;
   background: var(--surface);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   position: sticky;
-  top: 16px;
-  max-height: calc(100vh - 56px - 60px - 32px);
+  top: 10px;
+  max-height: calc(100vh - 50px - 50px - 20px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -1366,12 +1343,12 @@ tr.selected-row td {
 }
 
 .panel-right {
-  width: 240px;
+  width: 180px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 20px 16px;
+  padding: 14px 10px;
   gap: 0;
   overflow-y: auto;
 }
@@ -1395,17 +1372,10 @@ tr.selected-row td {
 }
 
 .panel-open-btn {
-  background: none;
-  border: none;
-  padding: 0 2px;
-  font-size: 15px;
-  color: var(--primary);
-  cursor: pointer;
-  line-height: 1;
-  opacity: .7;
-  transition: opacity .15s;
+  font-size: 13px;
+  padding: 6px 14px;
+  flex-shrink: 0;
 }
-.panel-open-btn:hover { opacity: 1; }
 
 .panel-empty {
   padding: 48px 20px;
@@ -1535,7 +1505,7 @@ tr.selected-row td {
 .panel-actions {
   display: flex;
   flex-direction: column;
-  gap: 34px;
+  gap: 14px;
   width: 100%;
 }
 
@@ -1571,12 +1541,12 @@ tr.selected-row td {
 
 /* Panel avatar */
 .panel-avatar-wrap {
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 .panel-avatar {
-  width: 180px;
-  height: 180px;
+  width: 130px;
+  height: 130px;
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid var(--border);
@@ -1608,14 +1578,14 @@ tr.selected-row td {
 }
 
 .panel-avatar-placeholder {
-  width: 180px;
-  height: 180px;
+  width: 130px;
+  height: 130px;
   border-radius: 50%;
   border: 3px dashed var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 56px;
+  font-size: 40px;
   color: var(--border);
   background: var(--bg);
 }
@@ -1748,6 +1718,22 @@ tr.selected-row td {
 .field-checkbox input {
   width: auto;
   cursor: pointer;
+}
+
+/* ── Responsive: 4:3 / narrow screens ──────────────────────────────────────── */
+@media (max-width: 860px) {
+  .content-area {
+    flex-direction: column;
+  }
+  .detail-panel {
+    width: 100%;
+    min-width: unset;
+    position: static;
+    max-height: 560px;
+  }
+  .panel-body {
+    min-height: 320px;
+  }
 }
 
 /* Add account modal */
