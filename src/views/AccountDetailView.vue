@@ -947,6 +947,7 @@ function levelClass(level) {
 .avatar-file-info { font-size: 11px; color: var(--text-muted); margin: 0; }
 
 /* Camera */
+.modal-camera         { max-width: 480px; }
 .modal-camera--active { max-width: 520px; }
 .camera-wrap { width: 100%; aspect-ratio: 4/3; background: #000; border-radius: var(--radius); overflow: hidden; }
 .camera-video { width: 100%; height: 100%; object-fit: cover; display: block; }

@@ -104,6 +104,7 @@ const messages = {
         products: 'Products',
         notes: 'Notes',
         instructions: 'Instructions',
+        logging: 'Logging',
       },
       notes: {
         title: 'Notes',
@@ -281,6 +282,15 @@ const messages = {
         deleteConfirmTitle: 'Confirm Delete',
         deleteConfirmMsg: 'Delete all demo accounts and their payment history? This action cannot be undone.',
         deleteConfirmBtn: 'Yes, delete all',
+      },
+      logging: {
+        title: 'Logger Level',
+        desc: 'Change the logging level for the backend package ru.gorilla.gim.backend via Spring Boot Actuator.',
+        effectiveLevel: 'Effective level',
+        setLevel: 'Set level',
+        success: 'Logger level set to {level}.',
+        errorFetch: 'Failed to fetch logger level.',
+        errorSet: 'Failed to set logger level.',
       },
       products: {
         title: 'Products',
@@ -478,6 +488,7 @@ const messages = {
         products: 'Продукты',
         notes: 'Заметки',
         instructions: 'Инструкции',
+        logging: 'Логирование',
       },
       notes: {
         title: 'Заметки',
@@ -655,6 +666,15 @@ const messages = {
         deleteConfirmTitle: 'Подтвердите удаление',
         deleteConfirmMsg: 'Удалить все демо-аккаунты и их историю платежей? Это действие необратимо.',
         deleteConfirmBtn: 'Да, удалить всё',
+      },
+      logging: {
+        title: 'Уровень логирования',
+        desc: 'Изменить уровень логирования пакета ru.gorilla.gim.backend через Spring Boot Actuator.',
+        effectiveLevel: 'Текущий уровень',
+        setLevel: 'Установить уровень',
+        success: 'Уровень логирования установлен: {level}.',
+        errorFetch: 'Не удалось получить уровень логирования.',
+        errorSet: 'Не удалось установить уровень логирования.',
       },
       products: {
         title: 'Продукты',

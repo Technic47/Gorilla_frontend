@@ -65,6 +65,13 @@
         >
           {{ $t('admin.tabs.instructions') }}
         </button>
+        <button
+          class="tab-btn"
+          :class="{ 'tab-active': activeTab === 'logging' }"
+          @click="activeTab = 'logging'"
+        >
+          {{ $t('admin.tabs.logging') }}
+        </button>
       </div>
 
       <!-- ── Analytics tab ───────────────────────────────────────────────── -->
@@ -638,6 +645,49 @@
         </div>
       </div>
 
+      <!-- ── Logging tab ───────────────────────────────────────────────────── -->
+      <div v-if="activeTab === 'logging'" class="tab-content">
+        <div class="card credentials-card">
+          <div class="panel-title-row">
+            <h2 class="card-title">{{ $t('admin.logging.title') }}</h2>
+            <button class="btn-secondary refresh-btn" :disabled="loggerLoading" @click="fetchLoggerLevel">
+              {{ $t('admin.backups.refresh') }}
+            </button>
+          </div>
+          <p class="card-desc">{{ $t('admin.logging.desc') }}</p>
+
+          <div v-if="loggerLoading" class="panel-state">{{ $t('admin.backups.loading') }}</div>
+          <template v-else>
+            <div class="field field-inline">
+              <label>{{ $t('admin.logging.effectiveLevel') }}</label>
+              <span class="logger-badge" :class="`level-${(loggerEffectiveLevel || 'unknown').toLowerCase()}`">
+                {{ loggerEffectiveLevel || '—' }}
+              </span>
+            </div>
+
+            <div class="field">
+              <label>{{ $t('admin.logging.setLevel') }}</label>
+              <div class="level-picker">
+                <button
+                  v-for="level in logLevels"
+                  :key="level"
+                  type="button"
+                  class="toggle-btn"
+                  :class="{ 'toggle-active': loggerConfiguredLevel === level }"
+                  :disabled="loggerSetLoading"
+                  @click="setLoggerLevel(level)"
+                >
+                  {{ level }}
+                </button>
+              </div>
+            </div>
+
+            <p v-if="loggerError"   class="status-msg status-err">{{ loggerError }}</p>
+            <p v-if="loggerSuccess" class="status-msg status-ok">{{ loggerSuccess }}</p>
+          </template>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -807,6 +857,7 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import api from '../api'
+import axios from 'axios'
 import LangSwitch from '../components/LangSwitch.vue'
 import { useI18n } from 'vue-i18n'
 
@@ -816,6 +867,10 @@ const { t, locale } = useI18n()
 
 const activeTab = ref('analytics')
 const instrTab  = ref('newAccount')
+
+watch(activeTab, (val) => {
+  if (val === 'logging') fetchLoggerLevel()
+})
 
 const overviewFeatures = [
   { icon: '👥' },
@@ -1406,6 +1461,58 @@ function formatSize(bytes) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`
 }
+
+// ── Logging ───────────────────────────────────────────────────────────────────
+const LOGGER_NAME = 'ru.gorilla.gim.backend'
+const logLevels   = ['TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR', 'OFF']
+
+const loggerLoading         = ref(false)
+const loggerSetLoading      = ref(false)
+const loggerConfiguredLevel = ref(null)
+const loggerEffectiveLevel  = ref(null)
+const loggerError           = ref('')
+const loggerSuccess         = ref('')
+
+function loggerHeaders() {
+  const token = localStorage.getItem('token')
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+async function fetchLoggerLevel() {
+  loggerLoading.value = true
+  loggerError.value   = ''
+  try {
+    const { data } = await axios.get(`/actuator/loggers/${LOGGER_NAME}`, { headers: loggerHeaders() })
+    loggerConfiguredLevel.value = data.configuredLevel
+    loggerEffectiveLevel.value  = data.effectiveLevel
+  } catch (e) {
+    const detail = e.response?.data?.detail || e.response?.data?.message
+    loggerError.value = detail || t('admin.logging.errorFetch')
+  } finally {
+    loggerLoading.value = false
+  }
+}
+
+async function setLoggerLevel(level) {
+  loggerSetLoading.value = true
+  loggerError.value      = ''
+  loggerSuccess.value    = ''
+  try {
+    await axios.post(
+      `/actuator/loggers/${LOGGER_NAME}`,
+      { configuredLevel: level },
+      { headers: { 'Content-Type': 'application/json', ...loggerHeaders() } },
+    )
+    loggerConfiguredLevel.value = level
+    loggerSuccess.value = t('admin.logging.success', { level })
+    fetchLoggerLevel()
+  } catch (e) {
+    const detail = e.response?.data?.detail || e.response?.data?.message
+    loggerError.value = detail || t('admin.logging.errorSet')
+  } finally {
+    loggerSetLoading.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -1920,4 +2027,30 @@ tr:hover td { filter: brightness(.97); }
 .warn-yellow    { background: #fff9c4; border-color: #f5a623; }
 .warn-lightred  { background: #ffcdd2; border-color: #e57373; }
 .warn-brightred { background: #f44336; border-color: #b71c1c; }
+
+/* Logger level */
+.level-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.logger-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+}
+.level-trace   { background: #ede7f6; color: #4a148c; border-color: #9575cd; }
+.level-debug   { background: #e3f2fd; color: #0d47a1; border-color: #64b5f6; }
+.level-info    { background: #e8f5e9; color: #1b5e20; border-color: #66bb6a; }
+.level-warn    { background: #fff8e1; color: #e65100; border-color: #ffb300; }
+.level-error   { background: #ffebee; color: #b71c1c; border-color: #e57373; }
+.level-off     { background: #f5f5f5; color: #616161; border-color: #bdbdbd; }
+.level-unknown { background: #f5f5f5; color: #616161; border-color: #bdbdbd; }
 </style>
