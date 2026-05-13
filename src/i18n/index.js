@@ -349,6 +349,14 @@ const messages = {
       block: 'Block account',
       unblock: 'Unblock account',
       blockError: 'Failed to update account status.',
+      delete: {
+        button: 'Delete account',
+        confirmTitle: 'Delete Account',
+        confirmMsg: 'Permanently delete this account along with all payment history? This cannot be undone.',
+        confirmBtn: 'Yes, delete',
+        cancel: 'Cancel',
+        error: 'Failed to delete account.',
+      },
       modal: {
         title: 'Update Payment',
         paidUntilInfo: 'Paid until',
@@ -733,6 +741,14 @@ const messages = {
       block: 'Заблокировать',
       unblock: 'Разблокировать',
       blockError: 'Не удалось обновить статус аккаунта.',
+      delete: {
+        button: 'Удалить аккаунт',
+        confirmTitle: 'Удаление аккаунта',
+        confirmMsg: 'Безвозвратно удалить аккаунт вместе с историей платежей? Это действие необратимо.',
+        confirmBtn: 'Да, удалить',
+        cancel: 'Отмена',
+        error: 'Не удалось удалить аккаунт.',
+      },
       modal: {
         title: 'Оплата абонемента',
         paidUntilInfo: 'Оплачено до',

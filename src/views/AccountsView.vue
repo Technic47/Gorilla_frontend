@@ -67,8 +67,19 @@
               <th
                   v-for="col in visibleColumns"
                   :key="col.key"
+                  draggable="true"
+                  @dragstart="onColDragStart(col.key)"
+                  @dragover.prevent="dragOverKey = col.key"
+                  @dragleave="dragOverKey = null"
+                  @drop.prevent="onColDrop(col.key)"
+                  @dragend="onColDragEnd"
                   @click="toggleSort(col.key)"
-                  :class="{ sortable: true, active: sortField === col.key }"
+                  :class="{
+                    sortable: true,
+                    active: sortField === col.key,
+                    'col-dragging': dragSrcKey === col.key,
+                    'col-drag-over': dragOverKey === col.key && dragSrcKey !== col.key,
+                  }"
               >
                 {{ col.label }}
                 <span class="sort-icon">
@@ -84,6 +95,7 @@
                 :style="rowStyle(row.warnings)"
                 :class="{ 'clickable-row': true, 'selected-row': selectedId === row.id }"
                 @click="selectAccount(row.id)"
+                @dblclick="router.push(`/account/${row.id}`)"
             >
               <td v-for="col in visibleColumns" :key="col.key">
                 {{ formatCell(row[col.key], col.key) }}
@@ -479,7 +491,9 @@ const allColumns = computed(() => [
   {key: 'updated', label: t('accounts.col.updated')},
 ])
 const visibleKeys = ref(['firstName', 'secondName', 'lastName', 'cardNumber', 'isBlocked', 'paidUntil'])
-const visibleColumns = computed(() => allColumns.value.filter(c => visibleKeys.value.includes(c.key)))
+const visibleColumns = computed(() =>
+  visibleKeys.value.map(key => allColumns.value.find(c => c.key === key)).filter(Boolean)
+)
 
 // ── Detail panel fields ───────────────────────────────────────────────────────
 const infoFields = computed(() => [
@@ -853,6 +867,30 @@ function toggleSort(key) {
     sortDir.value = 'asc'
   }
   goPage(0)
+}
+
+// ── Column drag-and-drop ──────────────────────────────────────────────────────
+const dragSrcKey = ref(null)
+const dragOverKey = ref(null)
+
+function onColDragStart(key) {
+  dragSrcKey.value = key
+}
+
+function onColDrop(key) {
+  if (!dragSrcKey.value || dragSrcKey.value === key) return
+  const keys = [...visibleKeys.value]
+  const fromIdx = keys.indexOf(dragSrcKey.value)
+  const toIdx = keys.indexOf(key)
+  if (fromIdx === -1 || toIdx === -1) return
+  keys.splice(fromIdx, 1)
+  keys.splice(toIdx, 0, dragSrcKey.value)
+  visibleKeys.value = keys
+}
+
+function onColDragEnd() {
+  dragSrcKey.value = null
+  dragOverKey.value = null
 }
 
 let searchTimer = null
@@ -1238,7 +1276,7 @@ th {
 }
 
 th.sortable {
-  cursor: pointer;
+  cursor: grab;
 }
 
 th.sortable:hover {
@@ -1247,6 +1285,16 @@ th.sortable:hover {
 
 th.active {
   background: var(--primary-light);
+}
+
+th.col-dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+th.col-drag-over {
+  outline: 2px dashed rgba(255, 255, 255, 0.8);
+  outline-offset: -3px;
 }
 
 .sort-icon {
@@ -1547,12 +1595,13 @@ tr.selected-row td {
 .panel-avatar {
   width: 130px;
   height: 130px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--border);
+  border-radius: var(--radius);
+  object-fit: contain;
+  border: 1px solid var(--border);
   display: block;
   cursor: zoom-in;
   transition: opacity .15s;
+  background: var(--bg);
 }
 
 .panel-avatar:hover { opacity: .85; }
@@ -1580,8 +1629,8 @@ tr.selected-row td {
 .panel-avatar-placeholder {
   width: 130px;
   height: 130px;
-  border-radius: 50%;
-  border: 3px dashed var(--border);
+  border-radius: var(--radius);
+  border: 1px dashed var(--border);
   display: flex;
   align-items: center;
   justify-content: center;

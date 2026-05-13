@@ -35,6 +35,9 @@
             >
               {{ blockLoading ? '…' : (account.isBlocked ? $t('detail.unblock') : $t('detail.block')) }}
             </button>
+            <button class="btn-danger" @click="openDeleteAccount">
+              {{ $t('detail.delete.button') }}
+            </button>
           </div>
         </div>
       </div>
@@ -288,6 +291,25 @@
           </div>
         </template>
 
+      </div>
+    </div>
+  </Teleport>
+
+  <!-- ── Delete account modal ─────────────────────────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="deleteAccountOpen" class="modal-overlay" @click.self="closeDeleteAccount">
+      <div class="modal">
+        <h3 class="modal-title">{{ $t('detail.delete.confirmTitle') }}</h3>
+        <p class="modal-msg">{{ $t('detail.delete.confirmMsg') }}</p>
+        <p v-if="deleteAccountError" class="error-msg">{{ deleteAccountError }}</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" :disabled="deleteAccountLoading" @click="closeDeleteAccount">
+            {{ $t('detail.delete.cancel') }}
+          </button>
+          <button class="btn-danger" :disabled="deleteAccountLoading" @click="confirmDeleteAccount">
+            {{ deleteAccountLoading ? '…' : $t('detail.delete.confirmBtn') }}
+          </button>
+        </div>
       </div>
     </div>
   </Teleport>
@@ -566,6 +588,36 @@ async function confirmDeletePayment() {
   }
 }
 
+// ── Delete account ────────────────────────────────────────────────────────────
+const deleteAccountOpen    = ref(false)
+const deleteAccountLoading = ref(false)
+const deleteAccountError   = ref('')
+
+function openDeleteAccount() {
+  deleteAccountError.value = ''
+  deleteAccountOpen.value  = true
+}
+
+function closeDeleteAccount() {
+  if (deleteAccountLoading.value) return
+  deleteAccountOpen.value = false
+}
+
+async function confirmDeleteAccount() {
+  deleteAccountLoading.value = true
+  deleteAccountError.value   = ''
+  try {
+    await api.delete(`/account/${route.params.id}`)
+    router.push('/')
+  } catch (e) {
+    const data = e.response?.data
+    deleteAccountError.value = data?.detail || data?.message || (typeof data === 'string' ? data : null)
+      || t('detail.delete.error')
+  } finally {
+    deleteAccountLoading.value = false
+  }
+}
+
 // ── Avatar upload ─────────────────────────────────────────────────────────────
 const avatarModalOpen    = ref(false)
 const avatarFile         = ref(null)
@@ -817,6 +869,13 @@ function levelClass(level) {
   color: var(--primary);
   margin-bottom: 20px;
 }
+
+.modal-msg {
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
 .field { margin-bottom: 16px; }
 .field label { display: block; font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
 .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
@@ -901,11 +960,12 @@ function levelClass(level) {
 .account-avatar {
   width: 100px;
   height: 100px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--border);
+  border-radius: var(--radius);
+  object-fit: contain;
+  border: 1px solid var(--border);
   cursor: zoom-in;
   transition: opacity .15s;
+  background: var(--bg);
 }
 
 .account-avatar:hover { opacity: .85; }
@@ -913,7 +973,7 @@ function levelClass(level) {
 .account-avatar-placeholder {
   width: 100px;
   height: 100px;
-  border-radius: 50%;
+  border-radius: var(--radius);
   background: var(--border);
   display: flex;
   align-items: center;
