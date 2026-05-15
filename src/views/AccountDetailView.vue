@@ -212,6 +212,11 @@
         </div>
 
         <div class="field">
+          <label>{{ $t('detail.modal.dateFrom') }}</label>
+          <input type="date" v-model="modalDateFrom"/>
+        </div>
+
+        <div class="field">
           <label>{{ $t('detail.modal.productSelect') }}</label>
           <div v-if="productsLoading" class="modal-hint">{{ $t('accounts.loading') }}</div>
           <p v-else-if="products.length === 0" class="modal-hint muted">{{ $t('detail.modal.noProducts') }}</p>
@@ -403,6 +408,7 @@ const modalError   = ref('')
 const products           = ref([])
 const productsLoading    = ref(false)
 const selectedProductId  = ref(null)
+const modalDateFrom      = ref('')
 
 async function fetchProducts() {
   productsLoading.value = true
@@ -432,8 +438,10 @@ const infoFields = computed(() => [
   { key: 'lastName',   label: t('accounts.col.lastName') },
   { key: 'id',         label: t('accounts.col.id') },
   { key: 'cardNumber', label: t('accounts.col.cardNumber') },
+  { key: 'phone',      label: t('accounts.col.phone') },
   { key: 'isBlocked',  label: t('accounts.col.isBlocked') },
   { key: 'paidUntil',  label: t('accounts.col.paidUntil') },
+  { key: 'registrationDate', label: t('accounts.col.registrationDate') },
   { key: 'created',    label: t('accounts.col.created') },
   { key: 'updated',    label: t('accounts.col.updated') },
 ])
@@ -523,6 +531,7 @@ async function toggleBlock() {
 // ── Payment modal ─────────────────────────────────────────────────────────────
 function openModal() {
   selectedProductId.value = null
+  modalDateFrom.value     = new Date().toISOString().slice(0, 10)
   modalError.value        = ''
   modalOpen.value         = true
   fetchProducts()
@@ -538,9 +547,12 @@ async function submitPayment() {
   modalError.value   = ''
   try {
     const product = products.value.find(p => p.id === selectedProductId.value)
+    const dateFrom = `${modalDateFrom.value}T00:00:00`
     await api.post('/payment', {
       accountId: Number(route.params.id),
       product,
+      dateFrom,
+      dateTo: applyPeriod(dateFrom, product.period),
     })
     modalOpen.value = false
     await fetchAccount()
@@ -759,8 +771,30 @@ function formatField(value, key) {
   if (value == null || value === '') return '—'
   if (key === 'isBlocked') return value ? t('accounts.yes') : t('accounts.no')
   if (key === 'paidUntil') return formatDate(value, true)
-  if (key === 'created' || key === 'updated') return formatDate(value, false)
+  if (key === 'created' || key === 'updated' || key === 'registrationDate') return formatDate(value, false)
   return value
+}
+
+function applyPeriod(dateStr, period) {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number)
+  let years = 0, months = 0, days = 0
+  if (typeof period === 'string') {
+    const match = period.match(/P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)D)?/)
+    if (match) {
+      years  = parseInt(match[1] || 0)
+      months = parseInt(match[2] || 0)
+      days   = parseInt(match[3] || 0)
+    }
+  } else if (period && typeof period === 'object') {
+    years  = period.years  ?? 0
+    months = period.months ?? 0
+    days   = period.days   ?? 0
+  }
+  const result = new Date(y + years, m - 1 + months, d + days)
+  const ry = result.getFullYear()
+  const rm = String(result.getMonth() + 1).padStart(2, '0')
+  const rd = String(result.getDate()).padStart(2, '0')
+  return `${ry}-${rm}-${rd}T00:00:00`
 }
 
 function formatDate(value, dateOnly = false) {

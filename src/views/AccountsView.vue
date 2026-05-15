@@ -298,6 +298,14 @@
             <button type="button" class="btn-secondary btn-scan" @click="openScanner">{{ $t('accounts.scan.button') }}</button>
           </div>
         </div>
+        <div class="field">
+          <label>{{ $t('accounts.col.phone') }}</label>
+          <input v-model="addForm.phone" type="tel"/>
+        </div>
+        <div class="field">
+          <label>{{ $t('accounts.col.registrationDate') }}</label>
+          <input v-model="addForm.registrationDate" type="date"/>
+        </div>
         <p v-if="addError" class="error-msg">{{ addError }}</p>
 
         <div class="modal-actions">
@@ -321,6 +329,11 @@
         <div class="field">
           <label>{{ $t('detail.modal.paidUntilInfo') }}</label>
           <span class="info-val">{{ formatCell(selectedAccount?.paidUntil, 'paidUntil') }}</span>
+        </div>
+
+        <div class="field">
+          <label>{{ $t('detail.modal.dateFrom') }}</label>
+          <input type="date" v-model="payDateFrom"/>
         </div>
 
         <div class="field">
@@ -441,11 +454,11 @@ const auth = useAuthStore()
 const addModalOpen = ref(false)
 const addLoading = ref(false)
 const addError = ref('')
-const addForm = reactive({firstName: '', secondName: '', lastName: '', cardNumber: ''})
+const addForm = reactive({firstName: '', secondName: '', lastName: '', cardNumber: '', phone: '', registrationDate: ''})
 const addFormValid = computed(() => addForm.firstName.trim() && addForm.lastName.trim() && addForm.cardNumber.trim())
 
 function openAddModal() {
-  Object.assign(addForm, {firstName: '', secondName: '', lastName: '', cardNumber: ''})
+  Object.assign(addForm, {firstName: '', secondName: '', lastName: '', cardNumber: '', phone: '', registrationDate: new Date().toISOString().slice(0, 10)})
   addError.value = ''
   addModalOpen.value = true
 }
@@ -464,6 +477,8 @@ async function submitAdd() {
       secondName: addForm.secondName.trim() || null,
       lastName: addForm.lastName.trim(),
       cardNumber: addForm.cardNumber.trim(),
+      phone: addForm.phone.trim() || null,
+      registrationDate: addForm.registrationDate ? `${addForm.registrationDate}T00:00:00` : null,
       isBlocked: false,
     }
     const {data} = await api.post('/account', payload)
@@ -485,12 +500,21 @@ const allColumns = computed(() => [
   {key: 'secondName', label: t('accounts.col.secondName')},
   {key: 'lastName', label: t('accounts.col.lastName')},
   {key: 'cardNumber', label: t('accounts.col.cardNumber')},
+  {key: 'phone', label: t('accounts.col.phone')},
   {key: 'isBlocked', label: t('accounts.col.isBlocked')},
   {key: 'paidUntil', label: t('accounts.col.paidUntil')},
   {key: 'created', label: t('accounts.col.created')},
   {key: 'updated', label: t('accounts.col.updated')},
 ])
-const visibleKeys = ref(['firstName', 'secondName', 'lastName', 'cardNumber', 'isBlocked', 'paidUntil'])
+const VISIBLE_KEYS_STORAGE = 'accounts_visibleKeys'
+const defaultVisibleKeys = ['firstName', 'secondName', 'lastName', 'cardNumber', 'phone', 'isBlocked', 'paidUntil']
+const visibleKeys = ref((() => {
+  try {
+    const saved = localStorage.getItem(VISIBLE_KEYS_STORAGE)
+    return saved ? JSON.parse(saved) : defaultVisibleKeys
+  } catch { return defaultVisibleKeys }
+})())
+watch(visibleKeys, val => localStorage.setItem(VISIBLE_KEYS_STORAGE, JSON.stringify(val)), { deep: true })
 const visibleColumns = computed(() =>
   visibleKeys.value.map(key => allColumns.value.find(c => c.key === key)).filter(Boolean)
 )
@@ -501,6 +525,7 @@ const infoFields = computed(() => [
   {key: 'secondName', label: t('accounts.col.secondName')},
   {key: 'lastName', label: t('accounts.col.lastName')},
   {key: 'cardNumber', label: t('accounts.col.cardNumber')},
+  {key: 'phone', label: t('accounts.col.phone')},
   {key: 'isBlocked', label: t('accounts.col.isBlocked')},
   {key: 'paidUntil', label: t('accounts.col.paidUntil')},
 ])
@@ -604,6 +629,7 @@ const payModalError   = ref('')
 const payProducts          = ref([])
 const payProductsLoading   = ref(false)
 const paySelectedProductId = ref(null)
+const payDateFrom          = ref('')
 
 async function fetchPayProducts() {
   payProductsLoading.value = true
@@ -619,6 +645,7 @@ async function fetchPayProducts() {
 
 function openPayModal() {
   paySelectedProductId.value = null
+  payDateFrom.value          = new Date().toISOString().slice(0, 10)
   payModalError.value        = ''
   payModalOpen.value         = true
   fetchPayProducts()
@@ -634,9 +661,12 @@ async function submitPayment() {
   payModalError.value   = ''
   try {
     const product = payProducts.value.find(p => p.id === paySelectedProductId.value)
+    const dateFrom = `${payDateFrom.value}T00:00:00`
     await api.post('/payment', {
       accountId: selectedAccount.value.id,
       product,
+      dateFrom,
+      dateTo: applyPeriod(dateFrom, product.period),
     })
     payModalOpen.value = false
     await refreshSelected()
@@ -937,6 +967,28 @@ function formatField(value, key) {
   if (key === 'paidUntil') return formatDate(value, true)
   if (key === 'created' || key === 'updated') return formatDate(value, false)
   return value
+}
+
+function applyPeriod(dateStr, period) {
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number)
+  let years = 0, months = 0, days = 0
+  if (typeof period === 'string') {
+    const match = period.match(/P(?:(\d+)Y)?(?:(\d+)M)?(?:(\d+)W)?(?:(\d+)D)?/)
+    if (match) {
+      years  = parseInt(match[1] || 0)
+      months = parseInt(match[2] || 0)
+      days   = parseInt(match[3] || 0) * 7 + parseInt(match[4] || 0)
+    }
+  } else if (period && typeof period === 'object') {
+    years  = period.years  ?? 0
+    months = period.months ?? 0
+    days   = period.days   ?? 0
+  }
+  const result = new Date(y + years, m - 1 + months, d + days)
+  const ry = result.getFullYear()
+  const rm = String(result.getMonth() + 1).padStart(2, '0')
+  const rd = String(result.getDate()).padStart(2, '0')
+  return `${ry}-${rm}-${rd}T00:00:00`
 }
 
 function formatDate(value, dateOnly = false) {

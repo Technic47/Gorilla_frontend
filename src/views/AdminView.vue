@@ -72,6 +72,13 @@
         >
           {{ $t('admin.tabs.logging') }}
         </button>
+        <button
+          class="tab-btn"
+          :class="{ 'tab-active': activeTab === 'accountsManage' }"
+          @click="activeTab = 'accountsManage'"
+        >
+          {{ $t('admin.tabs.accountsManage') }}
+        </button>
       </div>
 
       <!-- ── Analytics tab ───────────────────────────────────────────────── -->
@@ -688,8 +695,152 @@
         </div>
       </div>
 
+      <!-- ── Accounts Manage tab ────────────────────────────────────────────── -->
+      <div v-if="activeTab === 'accountsManage'" class="tab-content">
+
+        <!-- Filter boxes row -->
+        <div class="am-boxes-row">
+
+          <!-- Box 1: By Registration Period -->
+          <div class="card am-filter-card">
+            <h2 class="card-title">{{ $t('admin.accountsManage.byPeriod.title') }}</h2>
+            <div class="am-filter-bar">
+              <div class="am-filter-field">
+                <label>{{ $t('admin.accountsManage.byPeriod.dateFrom') }}</label>
+                <input v-model="amDateFrom" type="date" />
+              </div>
+              <div class="am-filter-field">
+                <label>{{ $t('admin.accountsManage.byPeriod.dateTo') }}</label>
+                <input v-model="amDateTo" type="date" />
+              </div>
+              <div class="am-filter-actions">
+                <button class="btn-primary" :disabled="amLoading" @click="fetchAccountsByPeriod">
+                  {{ $t('admin.accountsManage.search') }}
+                </button>
+                <button class="btn-secondary" :disabled="amLoading" @click="clearAmFilter">
+                  {{ $t('admin.accountsManage.clear') }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Box 2: By Paid Until -->
+          <div class="card am-filter-card">
+            <h2 class="card-title">{{ $t('admin.accountsManage.byPaidUntil.title') }}</h2>
+            <div class="am-filter-bar">
+              <div class="am-filter-field">
+                <label>{{ $t('admin.accountsManage.byPaidUntil.date') }}</label>
+                <input v-model="puDate" type="date" />
+              </div>
+              <div class="am-before-after">
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  :class="{ 'toggle-active': puBefore }"
+                  @click="puBefore = true"
+                >{{ $t('admin.accountsManage.byPaidUntil.before') }}</button>
+                <button
+                  type="button"
+                  class="toggle-btn"
+                  :class="{ 'toggle-active': !puBefore }"
+                  @click="puBefore = false"
+                >{{ $t('admin.accountsManage.byPaidUntil.after') }}</button>
+              </div>
+              <div class="am-filter-actions">
+                <button class="btn-primary" :disabled="amLoading || !puDate" @click="fetchAccountsByPaidUntil">
+                  {{ $t('admin.accountsManage.search') }}
+                </button>
+                <button class="btn-secondary" :disabled="amLoading" @click="clearPuFilter">
+                  {{ $t('admin.accountsManage.clear') }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Shared results table -->
+        <div class="card">
+          <div v-if="amLoading" class="panel-state">{{ $t('admin.accountsManage.loading') }}</div>
+          <div v-else-if="amError" class="panel-state status-err">{{ amError }}</div>
+          <div v-else-if="amAccounts !== null && amAccounts.length === 0" class="panel-state">
+            {{ $t('admin.accountsManage.empty') }}
+          </div>
+          <template v-else-if="amAccounts && amAccounts.length">
+            <div class="am-table-toolbar">
+              <button
+                class="btn-danger am-delete-btn"
+                :disabled="amSelected.length === 0 || amBulkDeleteLoading"
+                @click="openBulkDelete(amSelected)"
+              >
+                {{ $t('admin.accountsManage.deleteSelected', { n: amSelected.length }) }}
+              </button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>{{ $t('admin.accountsManage.col.firstName') }}</th>
+                    <th>{{ $t('admin.accountsManage.col.lastName') }}</th>
+                    <th>{{ $t('admin.accountsManage.col.cardNumber') }}</th>
+                    <th>{{ $t('admin.accountsManage.col.registrationDate') }}</th>
+                    <th>{{ $t('admin.accountsManage.col.paidUntil') }}</th>
+                    <th class="am-check-col">
+                      <input
+                        type="checkbox"
+                        :checked="amAllSelected"
+                        :indeterminate.prop="amSomeSelected"
+                        @change="toggleAmSelectAll"
+                      />
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="acc in amAccounts"
+                    :key="acc.id"
+                    class="clickable-row"
+                    :style="amRowStyle(acc.warnings)"
+                    @dblclick="router.push(`/account/${acc.id}`)"
+                  >
+                    <td>{{ acc.firstName ?? '—' }}</td>
+                    <td>{{ acc.lastName ?? '—' }}</td>
+                    <td>{{ acc.cardNumber ?? '—' }}</td>
+                    <td>{{ formatAmDate(acc.registrationDate) }}</td>
+                    <td>{{ formatAmDate(acc.paidUntil) }}</td>
+                    <td class="am-check-col" @click.stop>
+                      <input type="checkbox" :value="acc.id" v-model="amSelected" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
+        </div>
+
+      </div>
+
     </div>
   </div>
+
+  <!-- ── Bulk delete accounts confirmation modal ──────────────────────────── -->
+  <Teleport to="body">
+    <div v-if="amBulkDeleteConfirmOpen" class="modal-overlay" @click.self="amBulkDeleteConfirmOpen = false">
+      <div class="modal">
+        <h3 class="modal-title">{{ $t('admin.accountsManage.deleteConfirmTitle') }}</h3>
+        <p class="confirm-msg">{{ $t('admin.accountsManage.deleteConfirmMsg', { n: amBulkDeleteConfirmIds.length }) }}</p>
+        <p v-if="amBulkDeleteError" class="status-msg status-err">{{ amBulkDeleteError }}</p>
+        <div class="modal-actions">
+          <button class="btn-secondary" :disabled="amBulkDeleteLoading" @click="amBulkDeleteConfirmOpen = false">
+            {{ $t('admin.accountsManage.deleteCancel') }}
+          </button>
+          <button class="btn-danger" :disabled="amBulkDeleteLoading" @click="executeBulkDelete">
+            {{ amBulkDeleteLoading ? $t('admin.backups.loading') : $t('admin.accountsManage.deleteConfirmBtn') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </Teleport>
 
   <!-- ── Delete demo data confirmation modal ──────────────────────────────── -->
   <Teleport to="body">
@@ -734,7 +885,7 @@
           <div class="period-picker">
             <input v-model.number="periodAmount" type="number" min="1" class="period-amount" />
             <button
-              v-for="unit in ['week', 'month', 'year']"
+              v-for="unit in ['day', 'week', 'month', 'year']"
               :key="unit"
               type="button"
               class="toggle-btn"
@@ -1238,9 +1389,10 @@ const periodUnit   = ref('month')
 
 function buildPeriod() {
   const n = Math.max(1, periodAmount.value || 1)
-  if (periodUnit.value === 'year') return `P${n}Y`
-  if (periodUnit.value === 'week') return `P${n * 7}D`
-  return `P${n}M`
+  if (periodUnit.value === 'year')  return `P${n}Y`
+  if (periodUnit.value === 'month') return `P${n}M`
+  if (periodUnit.value === 'week')  return `P${n * 7}D`
+  return `P${n}D`
 }
 
 function parsePeriod(str) {
@@ -1250,10 +1402,11 @@ function parsePeriod(str) {
   const years  = parseInt(m[1] || 0)
   const months = parseInt(m[2] || 0)
   const days   = parseInt(m[3] || 0)
-  if (years && !months && !days)  { periodUnit.value = 'year';  periodAmount.value = years }
-  else if (months && !years && !days) { periodUnit.value = 'month'; periodAmount.value = months }
-  else if (days && !years && !months && days % 7 === 0) { periodUnit.value = 'week'; periodAmount.value = days / 7 }
-  else { periodUnit.value = 'month'; periodAmount.value = months || 1 }
+  if (years && !months && !days)                              { periodUnit.value = 'year';  periodAmount.value = years }
+  else if (months && !years && !days)                         { periodUnit.value = 'month'; periodAmount.value = months }
+  else if (days && !years && !months && days % 7 === 0)       { periodUnit.value = 'week';  periodAmount.value = days / 7 }
+  else if (days && !years && !months)                         { periodUnit.value = 'day';   periodAmount.value = days }
+  else                                                        { periodUnit.value = 'month'; periodAmount.value = months || 1 }
 }
 
 function openAddProduct() {
@@ -1512,6 +1665,145 @@ async function setLoggerLevel(level) {
   } finally {
     loggerSetLoading.value = false
   }
+}
+
+// ── Accounts Manage ───────────────────────────────────────────────────────────
+
+// ─ Shared table state ─
+const amAccounts = ref(null)
+const amLoading  = ref(false)
+const amError    = ref('')
+const amSelected = ref([])
+
+const amAllSelected  = computed(() =>
+  amAccounts.value?.length > 0 && amSelected.value.length === amAccounts.value.length
+)
+const amSomeSelected = computed(() =>
+  amSelected.value.length > 0 && amSelected.value.length < (amAccounts.value?.length ?? 0)
+)
+
+function toggleAmSelectAll() {
+  amSelected.value = amAllSelected.value ? [] : amAccounts.value.map(a => a.id)
+}
+
+function clearSharedTable() {
+  amAccounts.value = null
+  amSelected.value = []
+  amError.value    = ''
+}
+
+// ─ Bulk-delete state ─
+const amBulkDeleteConfirmOpen = ref(false)
+const amBulkDeleteConfirmIds  = ref([])
+const amBulkDeleteLoading     = ref(false)
+const amBulkDeleteError       = ref('')
+
+function openBulkDelete(ids) {
+  amBulkDeleteConfirmIds.value  = [...ids]
+  amBulkDeleteError.value       = ''
+  amBulkDeleteConfirmOpen.value = true
+}
+
+async function executeBulkDelete() {
+  const ids = amBulkDeleteConfirmIds.value
+  amBulkDeleteLoading.value = true
+  amBulkDeleteError.value   = ''
+  try {
+    await api.delete('/account/bulk', { data: ids })
+    const deleted = new Set(ids)
+    amAccounts.value = amAccounts.value.filter(a => !deleted.has(a.id))
+    amSelected.value = amSelected.value.filter(id => !deleted.has(id))
+    amBulkDeleteConfirmOpen.value = false
+    amBulkDeleteConfirmIds.value  = []
+  } catch (e) {
+    const detail = e.response?.data?.detail || e.response?.data?.message
+    amBulkDeleteError.value = detail || t('admin.accountsManage.deleteError')
+  } finally {
+    amBulkDeleteLoading.value = false
+  }
+}
+
+// ─ Box 1: By registration period ─
+const amDateFrom = ref('')
+const amDateTo   = ref('')
+
+async function fetchAccountsByPeriod() {
+  amLoading.value  = true
+  amError.value    = ''
+  amAccounts.value = null
+  amSelected.value = []
+  try {
+    const params = {}
+    const from = amDateFrom.value ? `${amDateFrom.value}T00:00:00` : null
+    const to   = amDateTo.value   ? `${amDateTo.value}T23:59:59`   : null
+    if (from) params.dateFrom = from
+    if (to)   params.dateTo   = to
+    const { data } = await api.get('/account/by-period', { params })
+    amAccounts.value = data
+  } catch (e) {
+    const detail = e.response?.data?.detail || e.response?.data?.message
+    amError.value = detail || t('admin.accountsManage.error')
+  } finally {
+    amLoading.value = false
+  }
+}
+
+function clearAmFilter() {
+  amDateFrom.value = ''
+  amDateTo.value   = ''
+  clearSharedTable()
+}
+
+// ─ Box 2: By paid until ─
+const puDate   = ref('')
+const puBefore = ref(true)
+
+async function fetchAccountsByPaidUntil() {
+  if (!puDate.value) return
+  amLoading.value  = true
+  amError.value    = ''
+  amAccounts.value = null
+  amSelected.value = []
+  try {
+    const dateStr = puBefore.value
+      ? `${puDate.value}T23:59:59`
+      : `${puDate.value}T00:00:00`
+    const { data } = await api.get('/account/by-paid-until', {
+      params: { date: dateStr, before: puBefore.value },
+    })
+    amAccounts.value = data
+  } catch (e) {
+    const detail = e.response?.data?.detail || e.response?.data?.message
+    amError.value = detail || t('admin.accountsManage.error')
+  } finally {
+    amLoading.value = false
+  }
+}
+
+function clearPuFilter() {
+  puDate.value = ''
+  clearSharedTable()
+}
+
+// ─ Helpers ─
+function amRowStyle(warnings) {
+  if (!warnings || warnings.length === 0) return { backgroundColor: '#ffffff' }
+  const levels = warnings.map(w => w.level)
+  if (levels.some(l => l === 'CRITICAL_WARNING' || l === 'ERROR'))
+    return { backgroundColor: '#ef5350', color: '#fff' }
+  if (levels.some(l => l === 'WARNING'))
+    return { backgroundColor: '#ffcdd2' }
+  if (levels.some(l => l === 'INFO'))
+    return { backgroundColor: '#fff9c4' }
+  return { backgroundColor: '#ffffff' }
+}
+
+function formatAmDate(value) {
+  if (!value) return '—'
+  const d = Array.isArray(value)
+    ? new Date(value[0], (value[1] ?? 1) - 1, value[2] ?? 1, value[3] ?? 0, value[4] ?? 0, value[5] ?? 0)
+    : new Date(value)
+  return isNaN(d) ? '—' : d.toLocaleDateString(locale.value)
 }
 </script>
 
@@ -2053,4 +2345,54 @@ tr:hover td { filter: brightness(.97); }
 .level-error   { background: #ffebee; color: #b71c1c; border-color: #e57373; }
 .level-off     { background: #f5f5f5; color: #616161; border-color: #bdbdbd; }
 .level-unknown { background: #f5f5f5; color: #616161; border-color: #bdbdbd; }
+
+/* Accounts Manage tab */
+.am-boxes-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.am-filter-card {
+  flex: 1 1 320px;
+  min-width: 280px;
+}
+.am-filter-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.am-filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.am-filter-field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+.am-filter-field input[type="date"] {
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--text);
+}
+.am-filter-actions { display: flex; gap: 8px; align-items: flex-end; }
+.am-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.am-delete-btn { font-size: 13px; padding: 6px 14px; }
+.am-check-col { width: 40px; text-align: center; }
+.am-before-after { display: flex; gap: 0; align-self: flex-end; }
+.am-before-after .toggle-btn { border-radius: 0; }
+.am-before-after .toggle-btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+.am-before-after .toggle-btn:last-child  { border-radius: 0 var(--radius) var(--radius) 0; border-left: none; }
+.clickable-row { cursor: pointer; }
 </style>
