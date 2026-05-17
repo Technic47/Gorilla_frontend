@@ -11,6 +11,10 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, '')
       },
+      '/actuator': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
       '/storage': {
         target: 'http://localhost:9000',
         changeOrigin: true,

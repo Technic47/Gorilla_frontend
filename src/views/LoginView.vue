@@ -1,6 +1,7 @@
 <template>
   <div class="auth-wrap">
     <div class="lang-pos">
+      <ThemeSwitch />
       <LangSwitch />
     </div>
 
@@ -37,6 +38,7 @@ import { reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 import LangSwitch from '../components/LangSwitch.vue'
+import ThemeSwitch from '../components/ThemeSwitch.vue'
 
 const { t } = useI18n()
 const auth = useAuthStore()

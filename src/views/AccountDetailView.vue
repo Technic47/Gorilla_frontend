@@ -4,6 +4,7 @@
     <header class="topbar">
       <span class="topbar-brand" @click="router.push('/')">{{ $t('brand') }}</span>
       <div class="topbar-right">
+        <ThemeSwitch />
         <LangSwitch />
         <button class="btn-secondary admin-btn" @click="router.push('/admin')">{{ $t('admin.button') }}</button>
         <button class="btn-secondary logout-btn" @click="auth.logout()">{{ $t('accounts.signOut') }}</button>
@@ -353,6 +354,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '../stores/auth'
 import api from '../api'
 import LangSwitch from '../components/LangSwitch.vue'
+import ThemeSwitch from '../components/ThemeSwitch.vue'
 
 const route  = useRoute()
 const router = useRouter()

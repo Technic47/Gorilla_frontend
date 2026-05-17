@@ -1,6 +1,7 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
+  color-scheme: light;
   --primary:   #1a237e;
   --primary-light: #3949ab;
   --surface:   #ffffff;
@@ -11,6 +12,36 @@
   --danger:    #c62828;
   --radius:    8px;
   --shadow:    0 2px 8px rgba(0,0,0,.10);
+}
+
+:root {
+  --row-ok-bg:       var(--surface);
+  --row-ok-color:    var(--text);
+  --row-info-bg:     #fff9c4;
+  --row-info-color:  #212121;
+  --row-warn-bg:     #ffcdd2;
+  --row-warn-color:  #212121;
+  --row-crit-bg:     #ef5350;
+  --row-crit-color:  #fff;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --primary:       #3949ab;
+  --primary-light: #5c6bc0;
+  --surface:       #1e1e2e;
+  --bg:            #12121a;
+  --border:        #2e2e42;
+  --text:          #e8eaf6;
+  --text-muted:    #9e9e9e;
+  --danger:        #e57373;
+  --shadow:        0 2px 8px rgba(0,0,0,.5);
+  --row-info-bg:   #3d3000;
+  --row-info-color:#fff176;
+  --row-warn-bg:   #4a1515;
+  --row-warn-color:#ef9a9a;
+  --row-crit-bg:   #b71c1c;
+  --row-crit-color:#fff;
 }
 
 body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
@@ -41,6 +72,7 @@ input, select {
   outline: none;
   width: 100%;
   background: var(--surface);
+  color: var(--text);
   transition: border-color .15s;
 }
 input:focus, select:focus { border-color: var(--primary-light); }

@@ -4,6 +4,7 @@
     <header class="topbar">
       <span class="topbar-brand" @click="router.push('/')">{{ $t('brand') }}</span>
       <div class="topbar-right">
+        <ThemeSwitch />
         <LangSwitch/>
         <button class="btn-secondary admin-btn" @click="router.push('/admin')">{{ $t('admin.button') }}</button>
         <button class="btn-secondary logout-btn" @click="auth.logout()">{{ $t('accounts.signOut') }}</button>
@@ -92,8 +93,7 @@
             <tr
                 v-for="row in filteredRows"
                 :key="row.id"
-                :style="rowStyle(row.warnings)"
-                :class="{ 'clickable-row': true, 'selected-row': selectedId === row.id }"
+                :class="['clickable-row', rowClass(row.warnings), { 'selected-row': selectedId === row.id }]"
                 @click="selectAccount(row.id)"
                 @dblclick="router.push(`/account/${row.id}`)"
             >
@@ -443,6 +443,7 @@ import {useI18n} from 'vue-i18n'
 import {useAuthStore} from '../stores/auth'
 import api from '../api'
 import LangSwitch from '../components/LangSwitch.vue'
+import ThemeSwitch from '../components/ThemeSwitch.vue'
 import {BarcodeDetector} from 'barcode-detector/pure'
 
 const router = useRouter()
@@ -940,16 +941,13 @@ function clearSearch() {
 }
 
 // ── Row color ─────────────────────────────────────────────────────────────────
-function rowStyle(warnings) {
-  if (!warnings || warnings.length === 0) return {backgroundColor: '#ffffff'}
+function rowClass(warnings) {
+  if (!warnings || warnings.length === 0) return ''
   const levels = warnings.map(w => w.level)
-  if (levels.some(l => l === 'CRITICAL_WARNING' || l === 'ERROR'))
-    return {backgroundColor: '#ef5350', color: '#fff'}
-  if (levels.some(l => l === 'WARNING'))
-    return {backgroundColor: '#ffcdd2'}
-  if (levels.some(l => l === 'INFO'))
-    return {backgroundColor: '#fff9c4'}
-  return {backgroundColor: '#ffffff'}
+  if (levels.some(l => l === 'CRITICAL_WARNING' || l === 'ERROR')) return 'row-critical'
+  if (levels.some(l => l === 'WARNING')) return 'row-warn'
+  if (levels.some(l => l === 'INFO')) return 'row-info'
+  return ''
 }
 
 // ── Cell formatting ───────────────────────────────────────────────────────────
@@ -1372,6 +1370,10 @@ tr:hover td {
 tr.clickable-row {
   cursor: pointer;
 }
+
+tr.row-info td     { background-color: var(--row-info-bg) !important; color: var(--row-info-color) !important; }
+tr.row-warn td     { background-color: var(--row-warn-bg) !important; color: var(--row-warn-color) !important; }
+tr.row-critical td { background-color: var(--row-crit-bg) !important; color: var(--row-crit-color) !important; }
 
 tr.selected-row td {
   background-color: rgba(57, 73, 171, 0.15) !important;

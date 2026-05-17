@@ -3,6 +3,7 @@
     <header class="topbar">
       <span class="topbar-brand" @click="router.push('/')">{{ $t('brand') }}</span>
       <div class="topbar-right">
+        <ThemeSwitch />
         <LangSwitch />
         <button class="btn-secondary logout-btn" @click="auth.logout()">{{ $t('accounts.signOut') }}</button>
       </div>
@@ -32,31 +33,10 @@
         </button>
         <button
           class="tab-btn"
-          :class="{ 'tab-active': activeTab === 'dbBackup' }"
-          @click="activeTab = 'dbBackup'"
-        >
-          {{ $t('admin.tabs.dbBackup') }}
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ 'tab-active': activeTab === 'credentials' }"
-          @click="activeTab = 'credentials'"
-        >
-          {{ $t('admin.tabs.credentials') }}
-        </button>
-        <button
-          class="tab-btn"
           :class="{ 'tab-active': activeTab === 'notes' }"
           @click="activeTab = 'notes'"
         >
           {{ $t('admin.tabs.notes') }}
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ 'tab-active': activeTab === 'demoData' }"
-          @click="activeTab = 'demoData'"
-        >
-          {{ $t('admin.tabs.demoData') }}
         </button>
         <button
           class="tab-btn"
@@ -67,17 +47,17 @@
         </button>
         <button
           class="tab-btn"
-          :class="{ 'tab-active': activeTab === 'logging' }"
-          @click="activeTab = 'logging'"
-        >
-          {{ $t('admin.tabs.logging') }}
-        </button>
-        <button
-          class="tab-btn"
           :class="{ 'tab-active': activeTab === 'accountsManage' }"
           @click="activeTab = 'accountsManage'"
         >
           {{ $t('admin.tabs.accountsManage') }}
+        </button>
+        <button
+          class="tab-btn"
+          :class="{ 'tab-active': activeTab === 'service' }"
+          @click="activeTab = 'service'"
+        >
+          {{ $t('admin.tabs.service') }}
         </button>
       </div>
 
@@ -94,43 +74,51 @@
           <div v-if="summaryLoading" class="panel-state">{{ $t('admin.backups.loading') }}</div>
           <div v-else-if="summaryError" class="panel-state status-err">{{ summaryError }}</div>
           <div v-else-if="summary" class="metrics-grid">
-            <div class="metric-tile metric-total">
-              <div class="metric-label">{{ $t('admin.analytics.accountsTotal') }}</div>
-              <div class="metric-value">{{ summary.accountsTotal }}</div>
-            </div>
-
-            <div class="metric-group">
-              <div class="metric-group-title">{{ $t('admin.analytics.registrations') }}</div>
-              <div class="metric-row">
-                <div class="metric-tile">
-                  <div class="metric-label">{{ $t('admin.analytics.week') }}</div>
-                  <div class="metric-value">{{ summary.registrationsWeek }}</div>
-                </div>
-                <div class="metric-tile">
-                  <div class="metric-label">{{ $t('admin.analytics.month') }}</div>
-                  <div class="metric-value">{{ summary.registrationsMonth }}</div>
-                </div>
-                <div class="metric-tile">
-                  <div class="metric-label">{{ $t('admin.analytics.year') }}</div>
-                  <div class="metric-value">{{ summary.registrationsYear }}</div>
-                </div>
+            <div class="metrics-accounts">
+              <div class="metric-tile metric-total">
+                <div class="metric-label">{{ $t('admin.analytics.accountsTotal') }}</div>
+                <div class="metric-value">{{ summary.accountsTotal }}</div>
+              </div>
+              <div class="metric-tile metric-inactive">
+                <div class="metric-label">{{ $t('admin.analytics.accountsInactive') }}</div>
+                <div class="metric-value">{{ summary.accountsInactive }}</div>
               </div>
             </div>
 
-            <div class="metric-group">
-              <div class="metric-group-title">{{ $t('admin.analytics.payments') }}</div>
-              <div class="metric-row">
-                <div class="metric-tile">
-                  <div class="metric-label">{{ $t('admin.analytics.week') }}</div>
-                  <div class="metric-value">{{ summary.paymentsWeek }}</div>
+            <div class="metrics-stats">
+              <div class="metric-group">
+                <div class="metric-group-title">{{ $t('admin.analytics.registrations') }}</div>
+                <div class="metric-row">
+                  <div class="metric-tile">
+                    <div class="metric-label">{{ $t('admin.analytics.week') }}</div>
+                    <div class="metric-value">{{ summary.registrationsWeek }}</div>
+                  </div>
+                  <div class="metric-tile">
+                    <div class="metric-label">{{ $t('admin.analytics.month') }}</div>
+                    <div class="metric-value">{{ summary.registrationsMonth }}</div>
+                  </div>
+                  <div class="metric-tile">
+                    <div class="metric-label">{{ $t('admin.analytics.year') }}</div>
+                    <div class="metric-value">{{ summary.registrationsYear }}</div>
+                  </div>
                 </div>
-                <div class="metric-tile">
-                  <div class="metric-label">{{ $t('admin.analytics.month') }}</div>
-                  <div class="metric-value">{{ summary.paymentsMonth }}</div>
-                </div>
-                <div class="metric-tile">
-                  <div class="metric-label">{{ $t('admin.analytics.year') }}</div>
-                  <div class="metric-value">{{ summary.paymentsYear }}</div>
+              </div>
+
+              <div class="metric-group">
+                <div class="metric-group-title">{{ $t('admin.analytics.payments') }}</div>
+                <div class="metric-row">
+                  <div class="metric-tile">
+                    <div class="metric-label">{{ $t('admin.analytics.week') }}</div>
+                    <div class="metric-value">{{ summary.paymentsWeek }}</div>
+                  </div>
+                  <div class="metric-tile">
+                    <div class="metric-label">{{ $t('admin.analytics.month') }}</div>
+                    <div class="metric-value">{{ summary.paymentsMonth }}</div>
+                  </div>
+                  <div class="metric-tile">
+                    <div class="metric-label">{{ $t('admin.analytics.year') }}</div>
+                    <div class="metric-value">{{ summary.paymentsYear }}</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -169,13 +157,39 @@
                 {{ $t(`admin.analytics.${r}`) }}
               </button>
             </div>
+            <div class="control-group">
+              <input
+                v-if="chartRange === 'week'"
+                type="week"
+                v-model="chartWeek"
+                class="chart-picker-input"
+              />
+              <input
+                v-else-if="chartRange === 'month'"
+                type="month"
+                v-model="chartMonth"
+                class="chart-picker-input"
+              />
+              <input
+                v-else
+                type="number"
+                v-model.number="chartYear"
+                :min="2020"
+                :max="new Date().getFullYear()"
+                class="chart-picker-input chart-year-input"
+              />
+              <button
+                class="btn-secondary btn-sm"
+                @click="resetChartPicker"
+              >{{ $t('admin.analytics.last') }}</button>
+            </div>
           </div>
 
-          <div v-if="chartLoading" class="panel-state">{{ $t('admin.backups.loading') }}</div>
+          <div v-if="chartLoading && !chartData.length" class="panel-state">{{ $t('admin.backups.loading') }}</div>
           <div v-else-if="chartError" class="panel-state status-err">{{ chartError }}</div>
           <div v-else-if="!chartData.length" class="panel-state muted">{{ $t('admin.analytics.noData') }}</div>
 
-          <div v-else class="chart-wrap">
+          <div v-else class="chart-wrap" :class="{ 'chart-dimmed': chartLoading }">
             <svg :viewBox="`0 0 ${chartW} ${chartH}`" class="chart-svg" preserveAspectRatio="none">
               <!-- y-axis grid lines -->
               <g class="grid">
@@ -240,8 +254,10 @@
         </div>
       </div>
 
-      <!-- ── DB Backup tab ────────────────────────────────────────────────── -->
-      <div v-if="activeTab === 'dbBackup'" class="tab-content">
+      <!-- ── Service tab ──────────────────────────────────────────────────── -->
+      <div v-if="activeTab === 'service'" class="tab-content">
+
+        <!-- DB Backup section -->
         <div class="admin-layout">
 
           <!-- Left: action cards -->
@@ -334,42 +350,144 @@
           </div>
 
         </div>
-      </div>
 
-      <!-- ── Credentials tab ─────────────────────────────────────────────── -->
-      <div v-if="activeTab === 'credentials'" class="tab-content">
-        <div class="card credentials-card">
-          <h2 class="card-title">{{ $t('admin.credentials.title') }}</h2>
-          <p class="card-desc">{{ $t('admin.credentials.desc') }}</p>
+        <!-- Bottom 3-column grid -->
+        <div class="service-bottom-grid">
 
-          <div class="field">
-            <label>{{ $t('admin.credentials.currentPassword') }}</label>
-            <input v-model="credForm.currentPassword" type="password" autocomplete="current-password" />
-          </div>
-          <div class="field">
-            <label>{{ $t('admin.credentials.newUsername') }}</label>
-            <input v-model="credForm.newUsername" type="text" autocomplete="username" />
-          </div>
-          <div class="field">
-            <label>{{ $t('admin.credentials.newPassword') }}</label>
-            <input v-model="credForm.newPassword" type="password" autocomplete="new-password" />
-          </div>
-          <div class="field">
-            <label>{{ $t('admin.credentials.confirmPassword') }}</label>
-            <input v-model="credForm.confirmPassword" type="password" autocomplete="new-password" />
+          <!-- Left: credentials -->
+          <div class="card credentials-card">
+            <h2 class="card-title">{{ $t('admin.credentials.title') }}</h2>
+            <p class="card-desc">{{ $t('admin.credentials.desc') }}</p>
+
+            <div class="field">
+              <label>{{ $t('admin.credentials.currentPassword') }}</label>
+              <input v-model="credForm.currentPassword" type="password" autocomplete="current-password" />
+            </div>
+            <div class="field">
+              <label>{{ $t('admin.credentials.newUsername') }}</label>
+              <input v-model="credForm.newUsername" type="text" autocomplete="username" />
+            </div>
+            <div class="field">
+              <label>{{ $t('admin.credentials.newPassword') }}</label>
+              <input v-model="credForm.newPassword" type="password" autocomplete="new-password" />
+            </div>
+            <div class="field">
+              <label>{{ $t('admin.credentials.confirmPassword') }}</label>
+              <input v-model="credForm.confirmPassword" type="password" autocomplete="new-password" />
+            </div>
+
+            <p v-if="credError" class="status-msg status-err">{{ credError }}</p>
+            <p v-if="credSuccess" class="status-msg status-ok">{{ credSuccess }}</p>
+
+            <button
+              class="btn-primary cred-submit"
+              :disabled="credLoading || !credForm.currentPassword.trim()"
+              @click="submitCredentials"
+            >
+              {{ credLoading ? $t('admin.credentials.submitting') : $t('admin.credentials.submit') }}
+            </button>
           </div>
 
-          <p v-if="credError" class="status-msg status-err">{{ credError }}</p>
-          <p v-if="credSuccess" class="status-msg status-ok">{{ credSuccess }}</p>
+          <!-- Center: logging -->
+          <div class="card credentials-card">
+            <div class="panel-title-row">
+              <h2 class="card-title">{{ $t('admin.logging.title') }}</h2>
+              <button class="btn-secondary refresh-btn" :disabled="loggerLoading" @click="fetchLoggerLevel">
+                {{ $t('admin.backups.refresh') }}
+              </button>
+            </div>
+            <p class="card-desc">{{ $t('admin.logging.desc') }}</p>
 
-          <button
-            class="btn-primary cred-submit"
-            :disabled="credLoading || !credForm.currentPassword.trim()"
-            @click="submitCredentials"
-          >
-            {{ credLoading ? $t('admin.credentials.submitting') : $t('admin.credentials.submit') }}
-          </button>
+            <div v-if="loggerLoading" class="panel-state">{{ $t('admin.backups.loading') }}</div>
+            <template v-else>
+              <div class="field field-inline">
+                <label>{{ $t('admin.logging.effectiveLevel') }}</label>
+                <span class="logger-badge" :class="`level-${(loggerEffectiveLevel || 'unknown').toLowerCase()}`">
+                  {{ loggerEffectiveLevel || '—' }}
+                </span>
+              </div>
+
+              <div class="field">
+                <label>{{ $t('admin.logging.setLevel') }}</label>
+                <div class="level-picker">
+                  <button
+                    v-for="level in logLevels"
+                    :key="level"
+                    type="button"
+                    class="toggle-btn"
+                    :class="{ 'toggle-active': loggerConfiguredLevel === level }"
+                    :disabled="loggerSetLoading"
+                    @click="setLoggerLevel(level)"
+                  >
+                    {{ level }}
+                  </button>
+                </div>
+              </div>
+
+              <p v-if="loggerError"   class="status-msg status-err">{{ loggerError }}</p>
+              <p v-if="loggerSuccess" class="status-msg status-ok">{{ loggerSuccess }}</p>
+            </template>
+          </div>
+
+          <!-- Right: demo data toggle -->
+          <div class="card credentials-card">
+            <h2 class="card-title">{{ $t('admin.service.demoTitle') }}</h2>
+            <p class="card-desc">{{ $t('admin.service.demoDesc') }}</p>
+            <div class="demo-toggle-row">
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="demoVisible" />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="demo-toggle-label">
+                {{ $t(demoVisible ? 'admin.service.demoOn' : 'admin.service.demoOff') }}
+              </span>
+            </div>
+          </div>
+
         </div>
+
+        <!-- Demo data management (shown when switch is on) -->
+        <div v-if="demoVisible" class="demo-layout demo-section">
+
+          <div class="card credentials-card">
+            <h2 class="card-title">{{ $t('admin.demo.title') }}</h2>
+            <p class="card-desc">{{ $t('admin.demo.desc') }}</p>
+
+            <div class="field field-inline">
+              <label>{{ $t('admin.demo.amountLabel') }}</label>
+              <input v-model.number="demoAmount" type="number" min="1" max="10000" class="input-days" />
+            </div>
+
+            <p v-if="demoError"   class="status-msg status-err">{{ demoError }}</p>
+            <p v-if="demoSuccess" class="status-msg status-ok">{{ demoSuccess }}</p>
+
+            <button
+              class="btn-primary cred-submit"
+              :disabled="demoLoading || !demoAmount || demoAmount < 1"
+              @click="generateDemo"
+            >
+              {{ demoLoading ? $t('admin.demo.generating') : $t('admin.demo.generate') }}
+            </button>
+          </div>
+
+          <div class="card credentials-card">
+            <h2 class="card-title">{{ $t('admin.demo.deleteTitle') }}</h2>
+            <p class="card-desc">{{ $t('admin.demo.deleteDesc') }}</p>
+
+            <p v-if="demoDeleteError"   class="status-msg status-err">{{ demoDeleteError }}</p>
+            <p v-if="demoDeleteSuccess" class="status-msg status-ok">{{ demoDeleteSuccess }}</p>
+
+            <button
+              class="btn-danger cred-submit"
+              :disabled="demoDeleteLoading"
+              @click="demoDeleteConfirmOpen = true"
+            >
+              {{ demoDeleteLoading ? $t('admin.demo.deleting') : $t('admin.demo.deleteButton') }}
+            </button>
+          </div>
+
+        </div>
+
       </div>
 
       <!-- ── Products tab ──────────────────────────────────────────────────── -->
@@ -608,93 +726,6 @@
         </div>
       </div>
 
-      <!-- ── Demo data tab ───────────────────────────────────────────────── -->
-      <div v-if="activeTab === 'demoData'" class="tab-content">
-        <div class="demo-layout">
-
-          <div class="card credentials-card">
-            <h2 class="card-title">{{ $t('admin.demo.title') }}</h2>
-            <p class="card-desc">{{ $t('admin.demo.desc') }}</p>
-
-            <div class="field field-inline">
-              <label>{{ $t('admin.demo.amountLabel') }}</label>
-              <input v-model.number="demoAmount" type="number" min="1" max="10000" class="input-days" />
-            </div>
-
-            <p v-if="demoError"   class="status-msg status-err">{{ demoError }}</p>
-            <p v-if="demoSuccess" class="status-msg status-ok">{{ demoSuccess }}</p>
-
-            <button
-              class="btn-primary cred-submit"
-              :disabled="demoLoading || !demoAmount || demoAmount < 1"
-              @click="generateDemo"
-            >
-              {{ demoLoading ? $t('admin.demo.generating') : $t('admin.demo.generate') }}
-            </button>
-          </div>
-
-          <div class="card credentials-card">
-            <h2 class="card-title">{{ $t('admin.demo.deleteTitle') }}</h2>
-            <p class="card-desc">{{ $t('admin.demo.deleteDesc') }}</p>
-
-            <p v-if="demoDeleteError"   class="status-msg status-err">{{ demoDeleteError }}</p>
-            <p v-if="demoDeleteSuccess" class="status-msg status-ok">{{ demoDeleteSuccess }}</p>
-
-            <button
-              class="btn-danger cred-submit"
-              :disabled="demoDeleteLoading"
-              @click="demoDeleteConfirmOpen = true"
-            >
-              {{ demoDeleteLoading ? $t('admin.demo.deleting') : $t('admin.demo.deleteButton') }}
-            </button>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- ── Logging tab ───────────────────────────────────────────────────── -->
-      <div v-if="activeTab === 'logging'" class="tab-content">
-        <div class="card credentials-card">
-          <div class="panel-title-row">
-            <h2 class="card-title">{{ $t('admin.logging.title') }}</h2>
-            <button class="btn-secondary refresh-btn" :disabled="loggerLoading" @click="fetchLoggerLevel">
-              {{ $t('admin.backups.refresh') }}
-            </button>
-          </div>
-          <p class="card-desc">{{ $t('admin.logging.desc') }}</p>
-
-          <div v-if="loggerLoading" class="panel-state">{{ $t('admin.backups.loading') }}</div>
-          <template v-else>
-            <div class="field field-inline">
-              <label>{{ $t('admin.logging.effectiveLevel') }}</label>
-              <span class="logger-badge" :class="`level-${(loggerEffectiveLevel || 'unknown').toLowerCase()}`">
-                {{ loggerEffectiveLevel || '—' }}
-              </span>
-            </div>
-
-            <div class="field">
-              <label>{{ $t('admin.logging.setLevel') }}</label>
-              <div class="level-picker">
-                <button
-                  v-for="level in logLevels"
-                  :key="level"
-                  type="button"
-                  class="toggle-btn"
-                  :class="{ 'toggle-active': loggerConfiguredLevel === level }"
-                  :disabled="loggerSetLoading"
-                  @click="setLoggerLevel(level)"
-                >
-                  {{ level }}
-                </button>
-              </div>
-            </div>
-
-            <p v-if="loggerError"   class="status-msg status-err">{{ loggerError }}</p>
-            <p v-if="loggerSuccess" class="status-msg status-ok">{{ loggerSuccess }}</p>
-          </template>
-        </div>
-      </div>
-
       <!-- ── Accounts Manage tab ────────────────────────────────────────────── -->
       <div v-if="activeTab === 'accountsManage'" class="tab-content">
 
@@ -799,8 +830,7 @@
                   <tr
                     v-for="acc in amAccounts"
                     :key="acc.id"
-                    class="clickable-row"
-                    :style="amRowStyle(acc.warnings)"
+                    :class="['clickable-row', amRowClass(acc.warnings)]"
                     @dblclick="router.push(`/account/${acc.id}`)"
                   >
                     <td>{{ acc.firstName ?? '—' }}</td>
@@ -1010,6 +1040,7 @@ import { useAuthStore } from '../stores/auth'
 import api from '../api'
 import axios from 'axios'
 import LangSwitch from '../components/LangSwitch.vue'
+import ThemeSwitch from '../components/ThemeSwitch.vue'
 import { useI18n } from 'vue-i18n'
 
 const router = useRouter()
@@ -1020,7 +1051,7 @@ const activeTab = ref('analytics')
 const instrTab  = ref('newAccount')
 
 watch(activeTab, (val) => {
-  if (val === 'logging') fetchLoggerLevel()
+  if (val === 'service') fetchLoggerLevel()
 })
 
 const overviewFeatures = [
@@ -1176,6 +1207,7 @@ async function triggerCleanup() {
 }
 
 // ── Demo data ─────────────────────────────────────────────────────────────────
+const demoVisible = ref(false)
 const demoAmount  = ref(50)
 const demoLoading = ref(false)
 const demoError   = ref('')
@@ -1224,6 +1256,9 @@ const summaryError   = ref('')
 
 const chartMetric  = ref('registrations')
 const chartRange   = ref('week')
+const chartYear    = ref(new Date().getFullYear())
+const chartMonth   = ref(currentYearMonthStr())
+const chartWeek    = ref(currentISOWeekStr())
 const chartData    = ref([])
 const chartLoading = ref(false)
 const chartError   = ref('')
@@ -1251,25 +1286,60 @@ async function fetchSummary() {
 
 function pad2(n) { return String(n).padStart(2, '0') }
 
+function currentYearMonthStr() {
+  const n = new Date()
+  return `${n.getFullYear()}-${pad2(n.getMonth() + 1)}`
+}
+
+function currentISOWeekStr() {
+  const n = new Date()
+  const d = new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()))
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7))
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+  const week = Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
+  return `${d.getUTCFullYear()}-W${pad2(week)}`
+}
+
+function resetChartPicker() {
+  if (chartRange.value === 'week')  chartWeek.value  = currentISOWeekStr()
+  else if (chartRange.value === 'month') chartMonth.value = currentYearMonthStr()
+  else chartYear.value = new Date().getFullYear()
+}
+
 function formatLocalDateTime(d) {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T` +
          `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
 }
 
 function rangeParams(range) {
-  const now = new Date()
-  const to = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
-  if (range === 'week') {
-    const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
-    return { granularity: 'day', from, to }
+  if (range === 'year') {
+    const y = chartYear.value
+    return {
+      granularity: 'month',
+      from: new Date(y, 0, 1),
+      to:   new Date(y, 11, 31, 23, 59, 59),
+    }
   }
   if (range === 'month') {
-    const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 29)
-    return { granularity: 'day', from, to }
+    const [y, m] = chartMonth.value.split('-').map(Number)
+    return {
+      granularity: 'day',
+      from: new Date(y, m - 1, 1),
+      to:   new Date(y, m, 0, 23, 59, 59),   // day 0 of next month = last day
+    }
   }
-  // year
-  const from = new Date(now.getFullYear(), now.getMonth() - 11, 1)
-  return { granularity: 'month', from, to }
+  // week — ISO week
+  const [yearPart, weekPart] = chartWeek.value.split('-W')
+  const y = Number(yearPart)
+  const w = Number(weekPart)
+  const jan4 = new Date(y, 0, 4)
+  const dow  = jan4.getDay() || 7              // Mon=1…Sun=7
+  const monday = new Date(jan4)
+  monday.setDate(jan4.getDate() - dow + 1 + (w - 1) * 7)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  sunday.setHours(23, 59, 59)
+  return { granularity: 'day', from: monday, to: sunday }
 }
 
 async function fetchChart() {
@@ -1357,7 +1427,7 @@ function shouldShowTick(idx) {
   return idx % step === 0 || idx === total - 1
 }
 
-watch([chartMetric, chartRange], fetchChart)
+watch([chartMetric, chartRange, chartYear, chartMonth, chartWeek], fetchChart)
 
 // ── Products ──────────────────────────────────────────────────────────────────
 const products        = ref([])
@@ -1786,16 +1856,13 @@ function clearPuFilter() {
 }
 
 // ─ Helpers ─
-function amRowStyle(warnings) {
-  if (!warnings || warnings.length === 0) return { backgroundColor: '#ffffff' }
+function amRowClass(warnings) {
+  if (!warnings || warnings.length === 0) return ''
   const levels = warnings.map(w => w.level)
-  if (levels.some(l => l === 'CRITICAL_WARNING' || l === 'ERROR'))
-    return { backgroundColor: '#ef5350', color: '#fff' }
-  if (levels.some(l => l === 'WARNING'))
-    return { backgroundColor: '#ffcdd2' }
-  if (levels.some(l => l === 'INFO'))
-    return { backgroundColor: '#fff9c4' }
-  return { backgroundColor: '#ffffff' }
+  if (levels.some(l => l === 'CRITICAL_WARNING' || l === 'ERROR')) return 'row-critical'
+  if (levels.some(l => l === 'WARNING')) return 'row-warn'
+  if (levels.some(l => l === 'INFO')) return 'row-info'
+  return ''
 }
 
 function formatAmDate(value) {
@@ -1898,6 +1965,58 @@ function formatAmDate(value) {
   align-items: flex-start;
   flex-wrap: wrap;
 }
+.demo-section { margin-top: 24px; }
+
+.service-bottom-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: 24px;
+  align-items: start;
+}
+
+.demo-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 24px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--primary); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(20px); }
+.demo-toggle-label { font-size: 14px; color: var(--text); }
 
 .cred-submit {
   align-self: flex-start;
@@ -1999,9 +2118,19 @@ tr:hover td { filter: brightness(.97); }
 .analytics-header-card { gap: 18px; }
 .metrics-grid {
   display: grid;
-  grid-template-columns: minmax(180px, 220px) 1fr 1fr;
+  grid-template-columns: minmax(180px, 220px) 1fr;
   gap: 18px;
   align-items: stretch;
+}
+.metrics-accounts {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.metrics-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 .metric-group {
   display: flex;
@@ -2051,6 +2180,13 @@ tr:hover td { filter: brightness(.97); }
   color: var(--text);
 }
 .metric-total .metric-value { color: #fff; font-size: 32px; }
+.metric-inactive {
+  background: #fff3e0;
+  border-color: #ffb74d;
+  justify-content: center;
+}
+.metric-inactive .metric-label { color: #e65100; }
+.metric-inactive .metric-value { color: #bf360c; font-size: 32px; }
 .generated-at { font-size: 12px; color: var(--text-muted); margin: 0; }
 
 .chart-card { gap: 16px; }
@@ -2061,6 +2197,16 @@ tr:hover td { filter: brightness(.97); }
   align-items: center;
 }
 .control-group { display: flex; align-items: center; gap: 6px; }
+.chart-picker-input {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+}
+.chart-year-input { width: 80px; }
 .control-label {
   font-size: 12px;
   font-weight: 600;
@@ -2089,6 +2235,7 @@ tr:hover td { filter: brightness(.97); }
 .toggle-active:hover { color: #fff; }
 
 .chart-wrap { width: 100%; overflow-x: auto; }
+.chart-dimmed { opacity: 0.35; pointer-events: none; transition: opacity 0.15s; }
 .chart-svg {
   width: 100%;
   height: 320px;
@@ -2395,4 +2542,7 @@ tr:hover td { filter: brightness(.97); }
 .am-before-after .toggle-btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
 .am-before-after .toggle-btn:last-child  { border-radius: 0 var(--radius) var(--radius) 0; border-left: none; }
 .clickable-row { cursor: pointer; }
+tr.row-info td     { background-color: var(--row-info-bg) !important; color: var(--row-info-color) !important; }
+tr.row-warn td     { background-color: var(--row-warn-bg) !important; color: var(--row-warn-color) !important; }
+tr.row-critical td { background-color: var(--row-crit-bg) !important; color: var(--row-crit-color) !important; }
 </style>
