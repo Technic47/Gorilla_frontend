@@ -63,6 +63,27 @@
 
       <!-- ── Analytics tab ───────────────────────────────────────────────── -->
       <div v-if="activeTab === 'analytics'" class="tab-content">
+
+        <!-- Active profiles by product -->
+        <div class="card active-by-product-card">
+          <div class="panel-title-row">
+            <h2 class="card-title">{{ $t('admin.analytics.activeByProductTitle') }}</h2>
+            <button class="btn-secondary refresh-btn" :disabled="activeByProductLoading" @click="fetchActiveByProduct">
+              {{ $t('admin.backups.refresh') }}
+            </button>
+          </div>
+          <div v-if="activeByProductLoading" class="panel-state">{{ $t('admin.backups.loading') }}</div>
+          <div v-else-if="activeByProductError" class="panel-state status-err">{{ activeByProductError }}</div>
+          <div v-else-if="!activeByProduct.length" class="panel-state muted">{{ $t('admin.analytics.noProducts') }}</div>
+          <div v-else class="product-active-row">
+            <div v-for="item in activeByProduct" :key="item.productId" class="metric-tile product-active-tile">
+              <div class="metric-label">{{ item.productDescription }}</div>
+              <div class="metric-value">{{ item.activeCount }}</div>
+              <div class="product-active-sub">{{ $t('admin.analytics.activeProfiles') }}</div>
+            </div>
+          </div>
+        </div>
+
         <div class="card analytics-header-card">
           <div class="panel-title-row">
             <h2 class="card-title">{{ $t('admin.analytics.summaryTitle') }}</h2>
@@ -1132,6 +1153,7 @@ async function fetchBackups() {
 onMounted(() => {
   fetchBackups()
   fetchSummary()
+  fetchActiveByProduct()
   fetchChart()
   fetchProducts()
   fetchNotes()
@@ -1254,6 +1276,10 @@ const summary        = ref(null)
 const summaryLoading = ref(false)
 const summaryError   = ref('')
 
+const activeByProduct        = ref([])
+const activeByProductLoading = ref(false)
+const activeByProductError   = ref('')
+
 const chartMetric  = ref('registrations')
 const chartRange   = ref('week')
 const chartYear    = ref(new Date().getFullYear())
@@ -1281,6 +1307,20 @@ async function fetchSummary() {
     summaryError.value = detail || t('admin.analytics.error')
   } finally {
     summaryLoading.value = false
+  }
+}
+
+async function fetchActiveByProduct() {
+  activeByProductLoading.value = true
+  activeByProductError.value   = ''
+  try {
+    const { data } = await api.get('/metrics/active-by-product')
+    activeByProduct.value = data
+  } catch (e) {
+    const detail = e.response?.data?.detail || e.response?.data?.message
+    activeByProductError.value = detail || t('admin.analytics.error')
+  } finally {
+    activeByProductLoading.value = false
   }
 }
 
@@ -2115,6 +2155,22 @@ tr:hover td { filter: brightness(.97); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
 /* Analytics */
+.active-by-product-card { gap: 14px; }
+.product-active-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.product-active-tile {
+  min-width: 140px;
+  flex: 1 1 140px;
+  max-width: 220px;
+}
+.product-active-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
 .analytics-header-card { gap: 18px; }
 .metrics-grid {
   display: grid;

@@ -18,7 +18,11 @@
       "Bash(grep -E \"\\\\.\\(js|config|json\\)$\")",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Techn\\\\Documents\\\\JavaProjects\\\\Gorilla\\\\backend\\\\src\\\\main\\\\java\\\\ru\\\\gorilla\\\\gim\\\\backend\" -Recurse -Directory)",
       "Bash(Select-Object FullName)",
-      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Techn\\\\Documents\\\\JavaProjects\\\\Gorilla\\\\backend\" -Recurse -Filter \"*Note*\" -ErrorAction SilentlyContinue)"
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\Techn\\\\Documents\\\\JavaProjects\\\\Gorilla\\\\backend\" -Recurse -Filter \"*Note*\" -ErrorAction SilentlyContinue)",
+      "Bash(Get-Content *)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

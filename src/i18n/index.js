@@ -203,6 +203,8 @@ const messages = {
       analytics: {
         summaryTitle: 'Summary',
         chartTitle: 'Time Series',
+        activeByProductTitle: 'Active Profiles by Product',
+        activeProfiles: 'Active profiles',
         accountsTotal: 'Total Accounts',
         accountsInactive: 'Inactive Accounts',
         registrations: 'Registrations',
@@ -218,6 +220,7 @@ const messages = {
         metric: 'Metric',
         generatedAt: 'Generated at',
         noData: 'No data for the selected range.',
+        noProducts: 'No active subscriptions.',
         error: 'Failed to load metrics.',
       },
       credentials: {
@@ -645,6 +648,8 @@ const messages = {
       analytics: {
         summaryTitle: 'Сводка',
         chartTitle: 'Динамика',
+        activeByProductTitle: 'Активные профили по продукту',
+        activeProfiles: 'Активных профилей',
         accountsTotal: 'Всего аккаунтов',
         accountsInactive: 'Неактивные аккаунты',
         registrations: 'Регистрации',
@@ -660,6 +665,7 @@ const messages = {
         metric: 'Метрика',
         generatedAt: 'Сформировано',
         noData: 'Нет данных за выбранный период.',
+        noProducts: 'Нет активных абонементов.',
         error: 'Не удалось загрузить метрики.',
       },
       credentials: {
