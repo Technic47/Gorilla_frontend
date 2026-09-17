@@ -111,6 +111,18 @@
             {{ $t('accounts.pageInfo', {page: currentPage + 1, total: totalPages, count: totalElements}) }}
           </span>
           <div class="page-controls">
+            <button
+                class="btn-secondary page-jump" :title="$t('accounts.first')"
+                :disabled="currentPage === 0" @click="goPage(0)"
+            >«</button>
+            <button
+                v-if="totalPages > 10" class="btn-secondary page-jump"
+                :disabled="currentPage === 0" @click="goPage(currentPage - 10)"
+            >−10</button>
+            <button
+                v-if="totalPages > 5" class="btn-secondary page-jump"
+                :disabled="currentPage === 0" @click="goPage(currentPage - 5)"
+            >−5</button>
             <button class="btn-secondary" :disabled="currentPage === 0" @click="goPage(currentPage - 1)">
               {{ $t('accounts.prev') }}
             </button>
@@ -120,6 +132,18 @@
             <button class="btn-secondary" :disabled="currentPage >= totalPages - 1" @click="goPage(currentPage + 1)">
               {{ $t('accounts.next') }}
             </button>
+            <button
+                v-if="totalPages > 5" class="btn-secondary page-jump"
+                :disabled="currentPage >= totalPages - 1" @click="goPage(currentPage + 5)"
+            >+5</button>
+            <button
+                v-if="totalPages > 10" class="btn-secondary page-jump"
+                :disabled="currentPage >= totalPages - 1" @click="goPage(currentPage + 10)"
+            >+10</button>
+            <button
+                class="btn-secondary page-jump" :title="$t('accounts.last')"
+                :disabled="currentPage >= totalPages - 1" @click="goPage(totalPages - 1)"
+            >»</button>
           </div>
         </div>
       </div>
@@ -532,19 +556,42 @@ const infoFields = computed(() => [
 ])
 
 // ── State ─────────────────────────────────────────────────────────────────────
+// Browsing position (page / sort / filters) survives a trip to the detail view
+// and back. sessionStorage, so a fresh browser session still starts on page 1.
+const PAGE_STATE_STORAGE = 'accounts_pageState'
+const savedPageState = (() => {
+  try {
+    const raw = sessionStorage.getItem(PAGE_STATE_STORAGE)
+    return raw ? JSON.parse(raw) : {}
+  } catch { return {} }
+})()
+
 const rows = ref([])
 const loading = ref(false)
 const error = ref('')
-const currentPage = ref(0)
-const pageSize = ref(15)
+const currentPage = ref(savedPageState.page ?? 0)
+const pageSize = ref(savedPageState.size ?? 15)
 const totalPages = ref(0)
 const totalElements = ref(0)
-const sortField = ref('id')
-const sortDir = ref('asc')
-const search = ref('')
+const sortField = ref(savedPageState.sortField ?? 'id')
+const sortDir = ref(savedPageState.sortDir ?? 'asc')
+const search = ref(savedPageState.search ?? '')
 const colMenuOpen = ref(false)
 const colToggleRef = ref(null)
-const hideBlocked = ref(false)
+const hideBlocked = ref(savedPageState.hideBlocked ?? false)
+
+watch([currentPage, pageSize, sortField, sortDir, search, hideBlocked], () => {
+  try {
+    sessionStorage.setItem(PAGE_STATE_STORAGE, JSON.stringify({
+      page: currentPage.value,
+      size: pageSize.value,
+      sortField: sortField.value,
+      sortDir: sortDir.value,
+      search: search.value,
+      hideBlocked: hideBlocked.value,
+    }))
+  } catch { /* storage unavailable — position simply isn't remembered */ }
+})
 
 // ── Detail panel state ────────────────────────────────────────────────────────
 const selectedId = ref(null)
@@ -876,6 +923,11 @@ async function fetchPage() {
     rows.value = data.content ?? []
     totalPages.value = data.page?.totalPages ?? 0
     totalElements.value = data.page?.totalElements ?? 0
+    // A remembered page can fall out of range if the result set shrank meanwhile
+    if (currentPage.value > 0 && rows.value.length === 0 && totalPages.value > 0) {
+      currentPage.value = totalPages.value - 1
+      return await fetchPage()
+    }
   } catch (e) {
     error.value = e.response?.data?.detail || t('accounts.errorDefault')
   } finally {
@@ -886,7 +938,8 @@ async function fetchPage() {
 watch(hideBlocked, () => goPage(0))
 
 function goPage(n) {
-  currentPage.value = n
+  // Jump buttons (±5 / ±10) overshoot on purpose — clamp instead of disabling them
+  currentPage.value = Math.min(Math.max(0, n), Math.max(0, totalPages.value - 1))
   fetchPage()
 }
 
@@ -1415,9 +1468,16 @@ tr.selected-row td {
   padding: 7px 10px;
 }
 
+.page-jump {
+  padding: 7px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 34px;
+}
+
 /* Detail panel */
 .detail-panel {
-  width: 460px;
+  width: 525px;
   min-width: 280px;
   flex-shrink: 0;
   background: var(--surface);
@@ -1445,7 +1505,7 @@ tr.selected-row td {
 }
 
 .panel-right {
-  width: 180px;
+  width: 245px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -1647,8 +1707,8 @@ tr.selected-row td {
 }
 
 .panel-avatar {
-  width: 130px;
-  height: 130px;
+  width: 195px;
+  height: 195px;
   border-radius: var(--radius);
   object-fit: contain;
   border: 1px solid var(--border);
@@ -1681,14 +1741,14 @@ tr.selected-row td {
 }
 
 .panel-avatar-placeholder {
-  width: 130px;
-  height: 130px;
+  width: 195px;
+  height: 195px;
   border-radius: var(--radius);
   border: 1px dashed var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
+  font-size: 60px;
   color: var(--border);
   background: var(--bg);
 }
