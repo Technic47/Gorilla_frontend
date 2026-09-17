@@ -61,6 +61,9 @@ const messages = {
         cameraError: 'Could not access camera',
       },
       barcodeHint: 'Scan the card or type the code',
+      error: {
+        duplicate: 'ERROR, {field} = {value} already exists.',
+      },
       prev: '‹ Prev',
       next: 'Next ›',
       first: 'First page',
@@ -522,6 +525,9 @@ const messages = {
         cameraError: 'Не удалось получить доступ к камере',
       },
       barcodeHint: 'Отсканируйте карту или введите код',
+      error: {
+        duplicate: 'ОШИБКА, {field} = {value} уже существует.',
+      },
       prev: '‹ Назад',
       next: 'Вперёд ›',
       first: 'Первая страница',

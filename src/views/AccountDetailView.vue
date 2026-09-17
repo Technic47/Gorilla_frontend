@@ -360,10 +360,12 @@ import api from '../api'
 import LangSwitch from '../components/LangSwitch.vue'
 import ThemeSwitch from '../components/ThemeSwitch.vue'
 import { useHardwareScanner } from '../composables/useHardwareScanner'
+import { apiErrorMessage } from '../utils/apiError'
 
 const route  = useRoute()
 const router = useRouter()
-const { t }  = useI18n()
+const i18n   = useI18n()
+const { t }  = i18n
 const auth   = useAuthStore()
 
 const lightboxUrl  = ref('')
@@ -521,9 +523,7 @@ async function submitUpdate() {
     updateModalOpen.value = false
     await fetchAccount()
   } catch (e) {
-    const d = e.response?.data
-    updateError.value = d?.detail || d?.message || (typeof d === 'string' ? d : null)
-      || t('detail.update.errorDefault')
+    updateError.value = apiErrorMessage(e, i18n, t('detail.update.errorDefault'))
   } finally {
     updateLoading.value = false
   }

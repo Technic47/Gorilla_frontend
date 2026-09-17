@@ -458,10 +458,12 @@ import api from '../api'
 import LangSwitch from '../components/LangSwitch.vue'
 import ThemeSwitch from '../components/ThemeSwitch.vue'
 import {useHardwareScanner} from '../composables/useHardwareScanner'
+import {apiErrorMessage} from '../utils/apiError'
 
 const router = useRouter()
 
-const {t} = useI18n()
+const i18n = useI18n()
+const {t} = i18n
 const auth = useAuthStore()
 
 // ── Add account modal ─────────────────────────────────────────────────────────
@@ -500,9 +502,7 @@ async function submitAdd() {
     addModalOpen.value = false
     router.push(`/account/${data.id}`)
   } catch (e) {
-    const d = e.response?.data
-    addError.value = d?.detail || d?.message || (typeof d === 'string' ? d : null)
-        || t('accounts.add.errorDefault')
+    addError.value = apiErrorMessage(e, i18n, t('accounts.add.errorDefault'))
   } finally {
     addLoading.value = false
   }
@@ -541,7 +541,6 @@ const infoFields = computed(() => [
   {key: 'secondName', label: t('accounts.col.secondName')},
   {key: 'lastName', label: t('accounts.col.lastName')},
   {key: 'cardNumber', label: t('accounts.col.cardNumber')},
-  {key: 'barcode', label: t('accounts.col.barcode')},
   {key: 'phone', label: t('accounts.col.phone')},
   {key: 'isBlocked', label: t('accounts.col.isBlocked')},
   {key: 'paidUntil', label: t('accounts.col.paidUntil')},
@@ -635,9 +634,7 @@ async function submitUpdate() {
     await refreshSelected()
     await fetchPage()
   } catch (e) {
-    const d = e.response?.data
-    updateError.value = d?.detail || d?.message || (typeof d === 'string' ? d : null)
-        || t('detail.update.errorDefault')
+    updateError.value = apiErrorMessage(e, i18n, t('detail.update.errorDefault'))
   } finally {
     updateLoading.value = false
   }
