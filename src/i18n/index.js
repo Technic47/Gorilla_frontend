@@ -60,14 +60,9 @@ const messages = {
         cameraDenied: 'Camera access was denied',
         cameraError: 'Could not access camera',
       },
-      scan: {
-        button: 'Scan barcode',
-        title: 'Scan Card Barcode',
-        cancel: 'Cancel',
-        scanning: 'Point the camera at a barcode…',
-        notSupported: 'Barcode scanning is not supported in this browser',
-        cameraDenied: 'Camera access was denied',
-        cameraError: 'Could not access camera',
+      barcodeHint: 'Scan the card or type the code',
+      error: {
+        duplicate: 'ERROR, {field} = {value} already exists.',
       },
       prev: '‹ Prev',
       next: 'Next ›',
@@ -89,6 +84,7 @@ const messages = {
         secondName: 'Middle name',
         lastName: 'Last name',
         cardNumber: 'Card number',
+        barcode: 'Barcode',
         phone: 'Phone',
         registrationDate: 'Registration date',
         isBlocked: 'Blocked',
@@ -117,6 +113,27 @@ const messages = {
         demoDesc: 'Enable to access demo data generation and deletion tools.',
         demoOn: 'Enabled',
         demoOff: 'Disabled',
+      },
+      scanner: {
+        title: 'Card Scanner',
+        desc: 'What happens when a card is scanned on the accounts page. Applies to every workstation.',
+        saved: 'Saved.',
+        loadError: 'Failed to load the scanner setting',
+        saveError: 'Failed to save the scanner setting',
+        action: {
+          SELECT: {
+            label: 'Show in side panel',
+            hint: 'Search, then select the match so its photo and details appear on the right.',
+          },
+          OPEN: {
+            label: 'Open account page',
+            hint: 'Search, then go straight to the full account page.',
+          },
+          SEARCH: {
+            label: 'Fill search only',
+            hint: 'Put the code in the search box and stop. The operator picks the row.',
+          },
+        },
       },
       notes: {
         title: 'Notes',
@@ -507,14 +524,9 @@ const messages = {
         cameraDenied: 'Доступ к камере запрещён',
         cameraError: 'Не удалось получить доступ к камере',
       },
-      scan: {
-        button: 'Сканировать штрихкод',
-        title: 'Сканирование штрихкода карты',
-        cancel: 'Отмена',
-        scanning: 'Наведите камеру на штрихкод…',
-        notSupported: 'Сканирование штрихкодов не поддерживается в этом браузере',
-        cameraDenied: 'Доступ к камере запрещён',
-        cameraError: 'Не удалось получить доступ к камере',
+      barcodeHint: 'Отсканируйте карту или введите код',
+      error: {
+        duplicate: 'ОШИБКА, {field} = {value} уже существует.',
       },
       prev: '‹ Назад',
       next: 'Вперёд ›',
@@ -536,6 +548,7 @@ const messages = {
         secondName: 'Отчество',
         lastName: 'Фамилия',
         cardNumber: 'Номер карты',
+        barcode: 'Штрихкод',
         phone: 'Телефон',
         registrationDate: 'Дата регистрации',
         isBlocked: 'Заблокирован',
@@ -564,6 +577,27 @@ const messages = {
         demoDesc: 'Включите для доступа к инструментам генерации и удаления демо-данных.',
         demoOn: 'Включено',
         demoOff: 'Выключено',
+      },
+      scanner: {
+        title: 'Сканер карт',
+        desc: 'Что происходит при сканировании карты на странице аккаунтов. Действует на всех рабочих местах.',
+        saved: 'Сохранено.',
+        loadError: 'Не удалось загрузить настройку сканера',
+        saveError: 'Не удалось сохранить настройку сканера',
+        action: {
+          SELECT: {
+            label: 'Показать в боковой панели',
+            hint: 'Найти и выделить совпадение — фото и данные появятся справа.',
+          },
+          OPEN: {
+            label: 'Открыть страницу аккаунта',
+            hint: 'Найти и сразу перейти на полную страницу аккаунта.',
+          },
+          SEARCH: {
+            label: 'Только заполнить поиск',
+            hint: 'Подставить код в строку поиска и остановиться. Строку выбирает оператор.',
+          },
+        },
       },
       notes: {
         title: 'Заметки',

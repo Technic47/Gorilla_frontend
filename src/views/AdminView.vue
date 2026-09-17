@@ -450,6 +450,35 @@
             </template>
           </div>
 
+          <!-- Scanner behaviour -->
+          <div class="card credentials-card">
+            <h2 class="card-title">{{ $t('admin.scanner.title') }}</h2>
+            <p class="card-desc">{{ $t('admin.scanner.desc') }}</p>
+
+            <div v-if="scanActionLoading" class="panel-state">{{ $t('admin.backups.loading') }}</div>
+            <template v-else>
+              <div class="field">
+                <div class="scan-action-picker">
+                  <button
+                    v-for="opt in scanActions"
+                    :key="opt"
+                    type="button"
+                    class="toggle-btn scan-action-btn"
+                    :class="{ 'toggle-active': scanAction === opt }"
+                    :disabled="scanActionSaving"
+                    @click="setScanAction(opt)"
+                  >
+                    <span class="scan-action-name">{{ $t(`admin.scanner.action.${opt}.label`) }}</span>
+                    <span class="scan-action-hint">{{ $t(`admin.scanner.action.${opt}.hint`) }}</span>
+                  </button>
+                </div>
+              </div>
+
+              <p v-if="scanActionError"   class="status-msg status-err">{{ scanActionError }}</p>
+              <p v-if="scanActionSuccess" class="status-msg status-ok">{{ scanActionSuccess }}</p>
+            </template>
+          </div>
+
           <!-- Right: demo data toggle -->
           <div class="card credentials-card">
             <h2 class="card-title">{{ $t('admin.service.demoTitle') }}</h2>
@@ -1072,8 +1101,53 @@ const activeTab = ref('analytics')
 const instrTab  = ref('newAccount')
 
 watch(activeTab, (val) => {
-  if (val === 'service') fetchLoggerLevel()
+  if (val === 'service') {
+    fetchLoggerLevel()
+    fetchScanAction()
+  }
 })
+
+// ── Scanner behaviour ─────────────────────────────────────────────────────────
+// Stored server-side so the setting reaches every reception browser, not only
+// the one the administrator happens to be sitting at.
+const SCAN_ACTION_KEY = 'scanner.accountsScanAction'
+const scanActions = ['SELECT', 'OPEN', 'SEARCH']
+
+const scanAction        = ref('SELECT')
+const scanActionLoading = ref(false)
+const scanActionSaving  = ref(false)
+const scanActionError   = ref('')
+const scanActionSuccess = ref('')
+
+async function fetchScanAction() {
+  scanActionLoading.value = true
+  scanActionError.value   = ''
+  try {
+    const { data } = await api.get('/setting')
+    if (scanActions.includes(data?.[SCAN_ACTION_KEY])) scanAction.value = data[SCAN_ACTION_KEY]
+  } catch (e) {
+    scanActionError.value = e.response?.data?.detail || t('admin.scanner.loadError')
+  } finally {
+    scanActionLoading.value = false
+  }
+}
+
+async function setScanAction(value) {
+  const previous = scanAction.value
+  scanAction.value        = value
+  scanActionSaving.value  = true
+  scanActionError.value   = ''
+  scanActionSuccess.value = ''
+  try {
+    await api.put(`/setting/${SCAN_ACTION_KEY}`, { value })
+    scanActionSuccess.value = t('admin.scanner.saved')
+  } catch (e) {
+    scanAction.value      = previous
+    scanActionError.value = e.response?.data?.detail || t('admin.scanner.saveError')
+  } finally {
+    scanActionSaving.value = false
+  }
+}
 
 const overviewFeatures = [
   { icon: '👥' },
@@ -2009,10 +2083,37 @@ function formatAmDate(value) {
 
 .service-bottom-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 18px;
   margin-top: 24px;
   align-items: start;
+}
+
+/* Scanner behaviour picker */
+.scan-action-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.scan-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  line-height: 1.35;
+}
+
+.scan-action-name {
+  font-weight: 600;
+}
+
+.scan-action-hint {
+  font-size: 11px;
+  opacity: .75;
 }
 
 .demo-toggle-row {
