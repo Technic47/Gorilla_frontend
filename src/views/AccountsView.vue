@@ -469,6 +469,7 @@ import api from '../api'
 import LangSwitch from '../components/LangSwitch.vue'
 import ThemeSwitch from '../components/ThemeSwitch.vue'
 import {BarcodeDetector} from 'barcode-detector/pure'
+import {useHardwareScanner} from '../composables/useHardwareScanner'
 
 const router = useRouter()
 
@@ -1141,6 +1142,58 @@ function closeScanner() {
   scanStatus.value = ''
 }
 
+// ── Hardware (keyboard-wedge) scanner ─────────────────────────────────────────
+// What a scan does on this page is configurable in Admin → Service → Scanner.
+const SCAN_ACTION_KEY = 'scanner.accountsScanAction'
+const scanAction = ref('SELECT') // SELECT | OPEN | SEARCH
+
+async function fetchScanAction() {
+  try {
+    const {data} = await api.get('/setting')
+    if (data?.[SCAN_ACTION_KEY]) scanAction.value = data[SCAN_ACTION_KEY]
+  } catch {
+    // keep the default behaviour if settings cannot be read
+  }
+}
+
+useHardwareScanner(code => {
+  // A modal carrying a card-number field takes precedence: fill it and stop.
+  if (addModalOpen.value) {
+    addForm.cardNumber = code
+    return
+  }
+  if (updateModalOpen.value) {
+    updateForm.cardNumber = code
+    return
+  }
+  // Other modals have nothing to do with card numbers — ignore the scan
+  if (payModalOpen.value || avatarModalOpen.value || scannerOpen.value) return
+
+  handleAccountsScan(code)
+})
+
+async function handleAccountsScan(code) {
+  // Overwrite rather than append: the burst's first character may already have
+  // landed in the search box before it was recognised as a scan.
+  search.value = code
+  currentPage.value = 0
+  clearTimeout(searchTimer) // pre-empt the debounced search
+  await fetchPage()
+
+  if (scanAction.value === 'SEARCH') return
+
+  // Only act on an unambiguous hit — the query also matches names and phones
+  const exact = rows.value.filter(r => (r.cardNumber ?? '').trim() === code)
+  if (exact.length !== 1) return
+
+  const id = exact[0].id
+  if (scanAction.value === 'OPEN') {
+    router.push(`/account/${id}`)
+  } else if (selectedId.value !== id) {
+    await selectAccount(id) // selectAccount toggles, so skip it when already shown
+  }
+}
+
 // ── Close column menu on outside click ───────────────────────────────────────
 function handleOutsideClick(e) {
   if (colToggleRef.value && !colToggleRef.value.contains(e.target)) {
@@ -1157,6 +1210,7 @@ function onKeyDown(e) {
 
 onMounted(() => {
   fetchPage()
+  fetchScanAction()
   document.addEventListener('click', handleOutsideClick)
   document.addEventListener('keydown', onKeyDown)
 })

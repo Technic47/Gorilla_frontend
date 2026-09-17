@@ -118,6 +118,27 @@ const messages = {
         demoOn: 'Enabled',
         demoOff: 'Disabled',
       },
+      scanner: {
+        title: 'Card Scanner',
+        desc: 'What happens when a card is scanned on the accounts page. Applies to every workstation.',
+        saved: 'Saved.',
+        loadError: 'Failed to load the scanner setting',
+        saveError: 'Failed to save the scanner setting',
+        action: {
+          SELECT: {
+            label: 'Show in side panel',
+            hint: 'Search, then select the match so its photo and details appear on the right.',
+          },
+          OPEN: {
+            label: 'Open account page',
+            hint: 'Search, then go straight to the full account page.',
+          },
+          SEARCH: {
+            label: 'Fill search only',
+            hint: 'Put the code in the search box and stop. The operator picks the row.',
+          },
+        },
+      },
       notes: {
         title: 'Notes',
         add: 'Add Note',
@@ -564,6 +585,27 @@ const messages = {
         demoDesc: 'Включите для доступа к инструментам генерации и удаления демо-данных.',
         demoOn: 'Включено',
         demoOff: 'Выключено',
+      },
+      scanner: {
+        title: 'Сканер карт',
+        desc: 'Что происходит при сканировании карты на странице аккаунтов. Действует на всех рабочих местах.',
+        saved: 'Сохранено.',
+        loadError: 'Не удалось загрузить настройку сканера',
+        saveError: 'Не удалось сохранить настройку сканера',
+        action: {
+          SELECT: {
+            label: 'Показать в боковой панели',
+            hint: 'Найти и выделить совпадение — фото и данные появятся справа.',
+          },
+          OPEN: {
+            label: 'Открыть страницу аккаунта',
+            hint: 'Найти и сразу перейти на полную страницу аккаунта.',
+          },
+          SEARCH: {
+            label: 'Только заполнить поиск',
+            hint: 'Подставить код в строку поиска и остановиться. Строку выбирает оператор.',
+          },
+        },
       },
       notes: {
         title: 'Заметки',

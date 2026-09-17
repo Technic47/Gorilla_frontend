@@ -355,6 +355,7 @@ import { useAuthStore } from '../stores/auth'
 import api from '../api'
 import LangSwitch from '../components/LangSwitch.vue'
 import ThemeSwitch from '../components/ThemeSwitch.vue'
+import { useHardwareScanner } from '../composables/useHardwareScanner'
 
 const route  = useRoute()
 const router = useRouter()
@@ -432,6 +433,13 @@ const updateLoading   = ref(false)
 const updateError     = ref('')
 const updateForm      = reactive({ firstName: '', secondName: '', lastName: '', cardNumber: '', isBlocked: false })
 const updateFormValid = computed(() => updateForm.firstName.trim() && updateForm.lastName.trim() && updateForm.cardNumber.trim())
+
+// ── Hardware (keyboard-wedge) scanner ─────────────────────────────────────────
+// The edit modal is the only card-number field on this page; a scan anywhere
+// else here has no target, so it is ignored.
+useHardwareScanner(code => {
+  if (updateModalOpen.value) updateForm.cardNumber = code
+})
 
 // ── Field definitions ─────────────────────────────────────────────────────────
 const infoFields = computed(() => [
