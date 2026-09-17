@@ -180,6 +180,10 @@
           <label>{{ $t('accounts.col.cardNumber') }}</label>
           <input v-model="updateForm.cardNumber" type="text" required />
         </div>
+        <div class="field">
+          <label>{{ $t('accounts.col.barcode') }}</label>
+          <input v-model="updateForm.barcode" type="text" maxlength="10" :placeholder="$t('accounts.barcodeHint')" />
+        </div>
         <div class="field field-checkbox">
           <label>
             <input v-model="updateForm.isBlocked" type="checkbox" />
@@ -431,14 +435,14 @@ const blockError   = ref('')
 const updateModalOpen = ref(false)
 const updateLoading   = ref(false)
 const updateError     = ref('')
-const updateForm      = reactive({ firstName: '', secondName: '', lastName: '', cardNumber: '', isBlocked: false })
+const updateForm      = reactive({ firstName: '', secondName: '', lastName: '', cardNumber: '', barcode: '', isBlocked: false })
 const updateFormValid = computed(() => updateForm.firstName.trim() && updateForm.lastName.trim() && updateForm.cardNumber.trim())
 
 // ── Hardware (keyboard-wedge) scanner ─────────────────────────────────────────
 // The edit modal is the only card-number field on this page; a scan anywhere
 // else here has no target, so it is ignored.
 useHardwareScanner(code => {
-  if (updateModalOpen.value) updateForm.cardNumber = code
+  if (updateModalOpen.value) updateForm.barcode = code
 })
 
 // ── Field definitions ─────────────────────────────────────────────────────────
@@ -448,6 +452,7 @@ const infoFields = computed(() => [
   { key: 'lastName',   label: t('accounts.col.lastName') },
   { key: 'id',         label: t('accounts.col.id') },
   { key: 'cardNumber', label: t('accounts.col.cardNumber') },
+  { key: 'barcode',    label: t('accounts.col.barcode') },
   { key: 'phone',      label: t('accounts.col.phone') },
   { key: 'isBlocked',  label: t('accounts.col.isBlocked') },
   { key: 'paidUntil',  label: t('accounts.col.paidUntil') },
@@ -487,6 +492,7 @@ function openUpdateModal() {
     secondName: a.secondName ?? '',
     lastName:   a.lastName   ?? '',
     cardNumber: a.cardNumber ?? '',
+    barcode:    a.barcode ?? '',
     isBlocked:  a.isBlocked  ?? false,
   })
   updateError.value    = ''
@@ -508,6 +514,7 @@ async function submitUpdate() {
       secondName: updateForm.secondName.trim() || null,
       lastName:   updateForm.lastName.trim(),
       cardNumber: updateForm.cardNumber.trim(),
+      barcode: updateForm.barcode.trim() || null,
       isBlocked:  updateForm.isBlocked,
     }
     await api.put(`/account/${route.params.id}`, payload)
@@ -1002,8 +1009,8 @@ function levelClass(level) {
 }
 
 .account-avatar {
-  width: 100px;
-  height: 100px;
+  width: 150px;
+  height: 150px;
   border-radius: var(--radius);
   object-fit: contain;
   border: 1px solid var(--border);
@@ -1015,14 +1022,14 @@ function levelClass(level) {
 .account-avatar:hover { opacity: .85; }
 
 .account-avatar-placeholder {
-  width: 100px;
-  height: 100px;
+  width: 150px;
+  height: 150px;
   border-radius: var(--radius);
   background: var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 32px;
+  font-size: 48px;
   color: var(--text-muted);
 }
 

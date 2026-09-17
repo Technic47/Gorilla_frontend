@@ -317,10 +317,11 @@
         </div>
         <div class="field">
           <label>{{ $t('accounts.col.cardNumber') }}</label>
-          <div class="input-with-btn">
-            <input v-model="addForm.cardNumber" type="text" required/>
-            <button type="button" class="btn-secondary btn-scan" @click="openScanner">{{ $t('accounts.scan.button') }}</button>
-          </div>
+          <input v-model="addForm.cardNumber" type="text" required/>
+        </div>
+        <div class="field">
+          <label>{{ $t('accounts.col.barcode') }}</label>
+          <input v-model="addForm.barcode" type="text" maxlength="10" :placeholder="$t('accounts.barcodeHint')"/>
         </div>
         <div class="field">
           <label>{{ $t('accounts.col.phone') }}</label>
@@ -414,6 +415,10 @@
           <label>{{ $t('accounts.col.cardNumber') }}</label>
           <input v-model="updateForm.cardNumber" type="text" required/>
         </div>
+        <div class="field">
+          <label>{{ $t('accounts.col.barcode') }}</label>
+          <input v-model="updateForm.barcode" type="text" maxlength="10" :placeholder="$t('accounts.barcodeHint')"/>
+        </div>
         <div class="field field-checkbox">
           <label>
             <input v-model="updateForm.isBlocked" type="checkbox"/>
@@ -442,22 +447,6 @@
     </div>
   </Teleport>
 
-  <!-- ── Barcode scanner modal ──────────────────────────────────────────────── -->
-  <Teleport to="body">
-    <div v-if="scannerOpen" class="modal-overlay" @click.self="closeScanner">
-      <div class="modal modal-scanner">
-        <h3 class="modal-title">{{ $t('accounts.scan.title') }}</h3>
-        <div class="camera-wrap">
-          <video ref="scanVideoRef" autoplay playsinline muted class="camera-video"/>
-        </div>
-        <p class="scan-status">{{ scanStatus }}</p>
-        <p v-if="scanError" class="error-msg">{{ scanError }}</p>
-        <div class="modal-actions">
-          <button class="btn-secondary" @click="closeScanner">{{ $t('accounts.scan.cancel') }}</button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
 </template>
 
 <script setup>
@@ -468,7 +457,6 @@ import {useAuthStore} from '../stores/auth'
 import api from '../api'
 import LangSwitch from '../components/LangSwitch.vue'
 import ThemeSwitch from '../components/ThemeSwitch.vue'
-import {BarcodeDetector} from 'barcode-detector/pure'
 import {useHardwareScanner} from '../composables/useHardwareScanner'
 
 const router = useRouter()
@@ -480,11 +468,11 @@ const auth = useAuthStore()
 const addModalOpen = ref(false)
 const addLoading = ref(false)
 const addError = ref('')
-const addForm = reactive({firstName: '', secondName: '', lastName: '', cardNumber: '', phone: '', registrationDate: ''})
+const addForm = reactive({firstName: '', secondName: '', lastName: '', cardNumber: '', barcode: '', phone: '', registrationDate: ''})
 const addFormValid = computed(() => addForm.firstName.trim() && addForm.lastName.trim() && addForm.cardNumber.trim())
 
 function openAddModal() {
-  Object.assign(addForm, {firstName: '', secondName: '', lastName: '', cardNumber: '', phone: '', registrationDate: new Date().toISOString().slice(0, 10)})
+  Object.assign(addForm, {firstName: '', secondName: '', lastName: '', cardNumber: '', barcode: '', phone: '', registrationDate: new Date().toISOString().slice(0, 10)})
   addError.value = ''
   addModalOpen.value = true
 }
@@ -503,6 +491,7 @@ async function submitAdd() {
       secondName: addForm.secondName.trim() || null,
       lastName: addForm.lastName.trim(),
       cardNumber: addForm.cardNumber.trim(),
+      barcode: addForm.barcode.trim() || null,
       phone: addForm.phone.trim() || null,
       registrationDate: addForm.registrationDate ? `${addForm.registrationDate}T00:00:00` : null,
       isBlocked: false,
@@ -526,6 +515,7 @@ const allColumns = computed(() => [
   {key: 'secondName', label: t('accounts.col.secondName')},
   {key: 'lastName', label: t('accounts.col.lastName')},
   {key: 'cardNumber', label: t('accounts.col.cardNumber')},
+  {key: 'barcode', label: t('accounts.col.barcode')},
   {key: 'phone', label: t('accounts.col.phone')},
   {key: 'isBlocked', label: t('accounts.col.isBlocked')},
   {key: 'paidUntil', label: t('accounts.col.paidUntil')},
@@ -551,6 +541,7 @@ const infoFields = computed(() => [
   {key: 'secondName', label: t('accounts.col.secondName')},
   {key: 'lastName', label: t('accounts.col.lastName')},
   {key: 'cardNumber', label: t('accounts.col.cardNumber')},
+  {key: 'barcode', label: t('accounts.col.barcode')},
   {key: 'phone', label: t('accounts.col.phone')},
   {key: 'isBlocked', label: t('accounts.col.isBlocked')},
   {key: 'paidUntil', label: t('accounts.col.paidUntil')},
@@ -604,7 +595,7 @@ const detailError = ref('')
 const updateModalOpen = ref(false)
 const updateLoading = ref(false)
 const updateError = ref('')
-const updateForm = reactive({firstName: '', secondName: '', lastName: '', cardNumber: '', isBlocked: false})
+const updateForm = reactive({firstName: '', secondName: '', lastName: '', cardNumber: '', barcode: '', isBlocked: false})
 const updateFormValid = computed(() => updateForm.firstName.trim() && updateForm.lastName.trim() && updateForm.cardNumber.trim())
 
 function openUpdateModal() {
@@ -614,6 +605,7 @@ function openUpdateModal() {
     secondName: a.secondName ?? '',
     lastName: a.lastName ?? '',
     cardNumber: a.cardNumber ?? '',
+    barcode: a.barcode ?? '',
     isBlocked: a.isBlocked ?? false,
   })
   updateError.value = ''
@@ -635,6 +627,7 @@ async function submitUpdate() {
       secondName: updateForm.secondName.trim() || null,
       lastName: updateForm.lastName.trim(),
       cardNumber: updateForm.cardNumber.trim(),
+      barcode: updateForm.barcode.trim() || null,
       isBlocked: updateForm.isBlocked,
     }
     await api.put(`/account/${selectedAccount.value.id}`, payload)
@@ -1060,88 +1053,6 @@ function levelClass(level) {
   return ''
 }
 
-// ── Barcode scanner ───────────────────────────────────────────────────────────
-const scannerOpen = ref(false)
-const scanVideoRef = ref(null)
-const scanStream = ref(null)
-const scanError = ref('')
-const scanStatus = ref('')
-const scanAnimId = ref(null)
-const pendingScanStream = ref(null)
-
-watch(scanVideoRef, el => {
-  if (el && pendingScanStream.value) {
-    el.srcObject = pendingScanStream.value
-    pendingScanStream.value = null
-    startScanLoop()
-  }
-})
-
-async function openScanner() {
-  scanError.value = ''
-  scanStatus.value = t('accounts.scan.scanning')
-  scannerOpen.value = true
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: 'environment'}, audio: false})
-    scanStream.value = stream
-    if (scanVideoRef.value) {
-      scanVideoRef.value.srcObject = stream
-      startScanLoop()
-    } else {
-      pendingScanStream.value = stream
-    }
-  } catch (e) {
-    scanError.value = (e.name === 'NotAllowedError' || e.name === 'PermissionDeniedError')
-        ? t('accounts.scan.cameraDenied')
-        : t('accounts.scan.cameraError')
-  }
-}
-
-function startScanLoop() {
-  const detector = new BarcodeDetector({
-    formats: ['code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code', 'data_matrix']
-  })
-  const video = scanVideoRef.value
-
-  async function scan() {
-    if (!scannerOpen.value) return
-    if (video.readyState >= 2) {
-      try {
-        const barcodes = await detector.detect(video)
-        if (barcodes.length > 0) {
-          addForm.cardNumber = barcodes[0].rawValue
-          closeScanner()
-          return
-        }
-      } catch {
-        // continue scanning on detection error
-      }
-    }
-    scanAnimId.value = requestAnimationFrame(scan)
-  }
-
-  scanAnimId.value = requestAnimationFrame(scan)
-}
-
-function stopScanStream() {
-  if (scanAnimId.value) {
-    cancelAnimationFrame(scanAnimId.value)
-    scanAnimId.value = null
-  }
-  if (scanStream.value) {
-    scanStream.value.getTracks().forEach(track => track.stop())
-    scanStream.value = null
-  }
-}
-
-function closeScanner() {
-  stopScanStream()
-  pendingScanStream.value = null
-  scannerOpen.value = false
-  scanError.value = ''
-  scanStatus.value = ''
-}
-
 // ── Hardware (keyboard-wedge) scanner ─────────────────────────────────────────
 // What a scan does on this page is configurable in Admin → Service → Scanner.
 const SCAN_ACTION_KEY = 'scanner.accountsScanAction'
@@ -1157,17 +1068,17 @@ async function fetchScanAction() {
 }
 
 useHardwareScanner(code => {
-  // A modal carrying a card-number field takes precedence: fill it and stop.
+  // A modal carrying a barcode field takes precedence: fill it and stop.
   if (addModalOpen.value) {
-    addForm.cardNumber = code
+    addForm.barcode = code
     return
   }
   if (updateModalOpen.value) {
-    updateForm.cardNumber = code
+    updateForm.barcode = code
     return
   }
-  // Other modals have nothing to do with card numbers — ignore the scan
-  if (payModalOpen.value || avatarModalOpen.value || scannerOpen.value) return
+  // Other modals have nothing to do with barcodes — ignore the scan
+  if (payModalOpen.value || avatarModalOpen.value) return
 
   handleAccountsScan(code)
 })
@@ -1178,20 +1089,37 @@ async function handleAccountsScan(code) {
   search.value = code
   currentPage.value = 0
   clearTimeout(searchTimer) // pre-empt the debounced search
-  await fetchPage()
 
-  if (scanAction.value === 'SEARCH') return
-
-  // Only act on an unambiguous hit — the query also matches names and phones
-  const exact = rows.value.filter(r => (r.cardNumber ?? '').trim() === code)
-  if (exact.length !== 1) return
-
-  const id = exact[0].id
-  if (scanAction.value === 'OPEN') {
-    router.push(`/account/${id}`)
-  } else if (selectedId.value !== id) {
-    await selectAccount(id) // selectAccount toggles, so skip it when already shown
+  if (scanAction.value === 'SEARCH') {
+    await fetchPage()
+    return
   }
+
+  // Exact barcode lookup rather than the free-text search, which would also
+  // match names and phones and could not tell one hit from several.
+  let account = null
+  try {
+    const {data} = await api.get('/account/by-barcode', {params: {code}})
+    account = data
+  } catch {
+    // 404 (unknown card) or network error — fall back to showing the search
+  }
+
+  if (!account) {
+    await fetchPage()
+    return
+  }
+
+  if (scanAction.value === 'OPEN') {
+    router.push(`/account/${account.id}`)
+    return
+  }
+
+  // Show the account in the side panel without waiting for a second request
+  await fetchPage()
+  selectedId.value = account.id
+  selectedAccount.value = account
+  detailError.value = ''
 }
 
 // ── Close column menu on outside click ───────────────────────────────────────
@@ -1204,7 +1132,6 @@ function handleOutsideClick(e) {
 function onKeyDown(e) {
   if (e.key === 'Escape') {
     lightboxUrl.value = ''
-    if (scannerOpen.value) closeScanner()
   }
 }
 
@@ -1217,7 +1144,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener('click', handleOutsideClick)
   document.removeEventListener('keydown', onKeyDown)
-  stopScanStream()
   stopCamera()
 })
 </script>
@@ -1893,35 +1819,6 @@ tr.selected-row td {
 .btn-preset--active { background: var(--primary); color: #fff; }
 .info-val { font-size: 14px; color: var(--text); }
 .modal-hint { font-size: 13px; color: var(--text-muted); padding: 4px 0; }
-
-.input-with-btn {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.input-with-btn input {
-  flex: 1;
-  min-width: 0;
-}
-
-.btn-scan {
-  flex-shrink: 0;
-  white-space: nowrap;
-  font-size: 12px;
-  padding: 7px 10px;
-}
-
-.modal-scanner {
-  max-width: 560px;
-}
-
-.scan-status {
-  font-size: 13px;
-  color: var(--text-muted);
-  text-align: center;
-  margin: 0 0 4px;
-}
 
 .field-checkbox label {
   display: flex;
